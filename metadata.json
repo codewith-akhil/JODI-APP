@@ -1,0 +1,6 @@
+{
+  "name": "Soulmate Matrimony",
+  "description": "Indian Matrimony & Matchmaking app featuring multi-language onboarding, OTP verification, match feeds, bio details, photo manager, chat inbox, and membership plans.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

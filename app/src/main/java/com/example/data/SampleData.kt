@@ -1,10 +1,14 @@
 package com.example.data
 
+import com.example.model.AppNotification
 import com.example.model.ChatMessage
 import com.example.model.ChatThread
+import com.example.model.FaqItem
 import com.example.model.Language
 import com.example.model.MembershipPlan
 import com.example.model.Profile
+import com.example.model.SuccessStory
+import com.example.model.TransactionRecord
 import com.example.model.UserPhoto
 
 object SampleData {
@@ -337,5 +341,70 @@ object SampleData {
         UserPhoto("up_1", "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&auto=format&fit=crop&q=80", true, "Approved"),
         UserPhoto("up_2", "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=600&auto=format&fit=crop&q=80", false, "Approved"),
         UserPhoto("up_3", "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&auto=format&fit=crop&q=80", false, "In Review")
+    )
+
+    // ---------- Seed data for the new feature pages ----------
+
+    val sampleNotifications = listOf(
+        AppNotification("ntf_1", "INTEREST", "New Interest Received", "Dr. Rahul Varghese (29, Kozhikode) sent you an interest. Review and respond now.", "5 min ago", profileId = "SOULMATE_102"),
+        AppNotification("ntf_2", "MESSAGE", "New Message from Ananya", "\"Would your family like to speak with my parents this Sunday?\"", "22 min ago", profileId = "SOULMATE_101"),
+        AppNotification("ntf_3", "VISITOR", "Your Profile Was Viewed", "Meera Krishnan viewed your full biodata today.", "1 hr ago", profileId = "SOULMATE_103"),
+        AppNotification("ntf_4", "MATCH", "9/10 Porutham Match Found!", "Arjun Pillai is a high Vedic compatibility match (94%). Explore the biodata.", "3 hrs ago", profileId = "SOULMATE_104"),
+        AppNotification("ntf_5", "SYSTEM", "Complete Your Verification", "Verify your Face & Govt ID to boost your Trust Score to 100% and get 3x more views.", "Yesterday"),
+        AppNotification("ntf_6", "PAYMENT", "Membership Offer Unlocked", "Gold Matchmaker plan is 67% OFF for a limited period. Upgrade to unlock direct contacts.", "2 days ago")
+    )
+
+    val sampleTransactions = listOf(
+        TransactionRecord("txn_1", "Gold Matchmaker", "6 Months", "₹ 199", "pay_rzp_88213", "order_rzp_44102", "15 Aug 2026, 10:24 AM", "SUCCESS"),
+        TransactionRecord("txn_2", "Silver Essential", "3 Months", "₹ 99", "pay_rzp_77120", "order_rzp_33915", "02 Mar 2026, 06:12 PM", "SUCCESS"),
+        TransactionRecord("txn_3", "Platinum Royal Plan", "12 Months", "₹ 599", "pay_rzp_66501", "order_rzp_22871", "14 Feb 2026, 09:45 AM", "FAILED")
+    )
+
+    val sampleSuccessStories = listOf(
+        SuccessStory(
+            "story_1", "Vishnu", "Parvathy", "Kochi, Kerala", "Married on 14 Jan 2026",
+            "We matched with 10/10 Poruthams on Soulmate. Our families connected over a traditional puja and everything fell into place beautifully within four months. Forever grateful!",
+            100,
+            "https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop&q=80"
+        ),
+        SuccessStory(
+            "story_2", "Karthik", "Anjali", "Trivandrum, Kerala", "Married on 22 Nov 2025",
+            "The verified profiles made all the difference. Both families could trust the biodata completely. We spoke for the first time on Soulmate's secure chat and the rest is history!",
+            96,
+            "https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=600&auto=format&fit=crop&q=80"
+        ),
+        SuccessStory(
+            "story_3", "Nikhil", "Fathima", "Kozhikode, Kerala", "Married on 8 Feb 2026",
+            "Despite different communities, the astrologer consultation feature helped our families understand compatibility beyond caste. A truly modern yet traditional platform.",
+            91,
+            "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&auto=format&fit=crop&q=80"
+        )
+    )
+
+    val sampleFaqs = listOf(
+        FaqItem(
+            "How does the Trust Score work?",
+            "Your Trust Score (0-100%) is computed from verifications: mobile (+20), Face liveness biometrics (+35), Government ID via DigiLocker (+35), horoscope details (+10). Higher scores appear earlier in discovery feeds and receive 3x more interests."
+        ),
+        FaqItem(
+            "Is my phone number visible to other members?",
+            "Never. Your number stays confidential until you explicitly unlock & share contact details, or accept a connection. All calls initiated through the app keep both numbers private."
+        ),
+        FaqItem(
+            "How are profiles verified?",
+            "Every profile undergoes AI Face Liveness Detection (blink & smile challenges) and Government ID validation (Aadhaar / Passport / DL / Voter ID) via DigiLocker. Look for the blue verified badge before engaging."
+        ),
+        FaqItem(
+            "What is the refund policy for memberships?",
+            "If you have not unlocked any contacts, we offer a 7-day no-questions-asked full refund. Raise a ticket via Help & Support and our team responds within 24 hours."
+        ),
+        FaqItem(
+            "How do I delete or hide my profile?",
+            "Go to Settings > Account. You can temporarily deactivate (hides you from all feeds) or permanently delete your profile with data erasure. Both actions require OTP verification for your safety."
+        ),
+        FaqItem(
+            "How accurate is the 10-Porutham matching?",
+            "Our engine follows traditional South Indian Vedic rules (Dina, Gana, Mahendra, Stree Deergha, Yoni, Rasi, Rasiyadhipathi, Vasya, Rajju, Vedha) and computes 36 Guna points, reviewed by certified astrologers for premium members."
+        )
     )
 }

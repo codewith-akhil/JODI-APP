@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "288850011637",
+    "firebase_url": "https://soulmate-a511d-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "soulmate-a511d",
+    "storage_bucket": "soulmate-a511d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:288850011637:android:0560304053c563625becbc",
+        "android_client_info": {
+          "package_name": "com.soulmate.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "288850011637-3lh2kjika6tqlv5icnm896ojde4on7av.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyM3IhSe1_hu0wXi5sLuz1lglmVZhhaDQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "288850011637-3lh2kjika6tqlv5icnm896ojde4on7av.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

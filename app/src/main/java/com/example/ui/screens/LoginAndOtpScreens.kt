@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,6 +32,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -280,14 +283,22 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Get OTP Button
+        // Get OTP Button — triggers real Firebase SMS OTP
+        val activity = context as? Activity
+        val isSendingOtp by viewModel.isOtpSending.collectAsState()
         Button(
             onClick = {
                 if (phoneNumber.length < 5) {
                     viewModel.setPhoneNumber("9876543210") // auto-fill sample for convenience
                 }
-                viewModel.navigateTo(ScreenState.OTP_VERIFY)
+                if (activity != null) {
+                    viewModel.requestOtp(activity)
+                } else {
+                    // Headless fallback (rare): go straight to OTP entry in demo mode
+                    viewModel.navigateTo(ScreenState.OTP_VERIFY)
+                }
             },
+            enabled = !isSendingOtp,
             colors = ButtonDefaults.buttonColors(
                 containerColor = DeepBurgundy,
                 contentColor = PureWhite
@@ -298,11 +309,25 @@ fun LoginScreen(
                 .height(54.dp)
                 .testTag("get_otp_button")
         ) {
-            Text(
-                text = "Get OTP / ഒ.ടി.പി നേടുക",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
+            if (isSendingOtp) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = PureWhite,
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Sending OTP via Firebase...",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            } else {
+                Text(
+                    text = "Get OTP / ഒ.ടി.പി നേടുക",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -334,32 +359,50 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Quick Truecaller 1-Tap Login
+        // Google Sign-In (Credential Manager + Firebase)
+        val googleActivity = context as? Activity
+        val isGoogleSigningIn by viewModel.isGoogleSigningIn.collectAsState()
         OutlinedButton(
-            onClick = {
-                viewModel.setPhoneNumber("9876543210")
-                viewModel.verifyOtp("1234")
-            },
+            onClick = { googleActivity?.let { viewModel.signInWithGoogle(it) } },
+            enabled = !isGoogleSigningIn,
             shape = RoundedCornerShape(16.dp),
-            border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF0087FF)),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF0087FF)),
+            border = androidx.compose.foundation.BorderStroke(1.5.dp, BorderLight),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp)
-                .testTag("truecaller_login_button")
+                .testTag("google_signin_button")
         ) {
-            Icon(
-                imageVector = Icons.Default.FlashOn,
-                contentDescription = "Quick Login",
-                tint = Color(0xFF0087FF),
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "1-Tap Instant Login with Truecaller",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
-            )
+            if (isGoogleSigningIn) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = DeepBurgundy,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                // Google "G" mark
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .background(PureWhite)
+                        .border(1.dp, BorderLight, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "G",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color(0xFF4285F4)
+                    )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Continue with Google",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -414,13 +457,23 @@ fun OtpVerificationScreen(
     val countryCode by viewModel.countryCode.collectAsState()
     val otpCode by viewModel.otpCode.collectAsState()
     val isOtpError by viewModel.isOtpError.collectAsState()
+    val isVerifying by viewModel.isVerifyingOtp.collectAsState()
 
+    val context = LocalContext.current
+    val activity = context as? Activity
     var secondsLeft by remember { mutableIntStateOf(30) }
 
     LaunchedEffect(key1 = secondsLeft) {
         if (secondsLeft > 0) {
             delay(1000L)
             secondsLeft -= 1
+        }
+    }
+
+    // Auto-submit when all 6 digits are entered
+    LaunchedEffect(otpCode) {
+        if (otpCode.length == 6 && !isVerifying) {
+            viewModel.verifyOtp(otpCode)
         }
     }
 
@@ -474,7 +527,7 @@ fun OtpVerificationScreen(
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "Enter the 4-digit code sent to ",
+                text = "Enter the 6-digit code sent to ",
                 fontSize = 14.sp,
                 color = TextSecondary
             )
@@ -488,19 +541,20 @@ fun OtpVerificationScreen(
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // OTP Input Boxes (4 Digits)
+        // OTP Input Boxes (6 Digits — Firebase Phone Auth standard)
         Row(
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            for (i in 0 until 4) {
+            for (i in 0 until 6) {
                 val digit = if (i < otpCode.length) otpCode[i].toString() else ""
                 val isFocused = i == otpCode.length
 
                 Box(
                     modifier = Modifier
-                        .size(65.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .weight(1f)
+                        .height(54.dp)
+                        .clip(RoundedCornerShape(12.dp))
                         .background(PureWhite)
                         .border(
                             width = if (isFocused) 2.dp else 1.dp,
@@ -510,14 +564,14 @@ fun OtpVerificationScreen(
                                 digit.isNotEmpty() -> DeepBurgundy
                                 else -> BorderLight
                             },
-                            shape = RoundedCornerShape(14.dp)
+                            shape = RoundedCornerShape(12.dp)
                         )
                         .testTag("otp_box_$i"),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = digit,
-                        fontSize = 26.sp,
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
@@ -528,14 +582,14 @@ fun OtpVerificationScreen(
         if (isOtpError) {
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "Please enter all 4 digits of the OTP",
+                text = "Invalid code — please enter the 6-digit OTP",
                 color = CrimsonRed,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Demo Helper Card
         Card(
@@ -555,14 +609,15 @@ fun OtpVerificationScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Demo Tip: Quick Fill '1234' to verify instantly",
-                    fontSize = 12.sp,
+                    text = "Demo fallback: use OTP 123456 if Firebase SMS is unavailable",
+                    fontSize = 11.sp,
                     color = SuccessGreen,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    lineHeight = 14.sp
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 TextButton(
-                    onClick = { viewModel.setOtpCode("1234") },
+                    onClick = { viewModel.setOtpCode("123456") },
                     modifier = Modifier.testTag("quick_fill_otp")
                 ) {
                     Text("Auto Fill", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SuccessGreen)
@@ -570,7 +625,7 @@ fun OtpVerificationScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Resend Timer
         Row(
@@ -588,7 +643,7 @@ fun OtpVerificationScreen(
                 TextButton(
                     onClick = {
                         secondsLeft = 30
-                        viewModel.showToast("OTP resent to $countryCode $phoneNumber")
+                        activity?.let { viewModel.requestOtp(it) }
                     },
                     modifier = Modifier.testTag("resend_otp_button")
                 ) {
@@ -606,13 +661,8 @@ fun OtpVerificationScreen(
 
         // Verify Button
         Button(
-            onClick = {
-                val success = viewModel.verifyOtp(otpCode)
-                if (!success && otpCode.isEmpty()) {
-                    viewModel.setOtpCode("1234")
-                    viewModel.verifyOtp("1234")
-                }
-            },
+            onClick = { viewModel.verifyOtp(otpCode) },
+            enabled = otpCode.length == 6 && !isVerifying,
             colors = ButtonDefaults.buttonColors(
                 containerColor = DeepBurgundy,
                 contentColor = PureWhite
@@ -623,11 +673,25 @@ fun OtpVerificationScreen(
                 .height(54.dp)
                 .testTag("verify_otp_button")
         ) {
-            Text(
-                text = "Verify & Continue",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
+            if (isVerifying) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = PureWhite,
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Verifying...",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            } else {
+                Text(
+                    text = "Verify & Continue",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -660,7 +724,7 @@ fun OtpVerificationScreen(
                                         }
                                     }
                                     else -> {
-                                        if (otpCode.length < 4) {
+                                        if (otpCode.length < 6) {
                                             viewModel.setOtpCode(otpCode + key)
                                         }
                                     }

@@ -1,5 +1,9 @@
 package com.example.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -95,6 +99,13 @@ fun PhotoManagerView(
     var showAddPhotoSheet by remember { mutableStateOf(false) }
     var previewPhotoUrl by remember { mutableStateOf<String?>(null) }
     var isPrivacyEnabled by remember { mutableStateOf(false) }
+
+    // Real device gallery picker → Firebase Storage upload
+    val galleryPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { pickedUri: Uri? ->
+        pickedUri?.let { viewModel.uploadUserPhoto(it) }
+    }
 
     Column(
         modifier = modifier
@@ -281,7 +292,11 @@ fun PhotoManagerView(
                     icon = Icons.Default.PhotoAlbum,
                     onClick = {
                         showAddPhotoSheet = false
-                        viewModel.addUserPhoto("https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=600&auto=format&fit=crop&q=80")
+                        galleryPickerLauncher.launch(
+                            androidx.activity.result.PickVisualMediaRequest(
+                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                            )
+                        )
                     }
                 )
 

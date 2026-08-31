@@ -155,7 +155,7 @@ fun SplashScreen(
     }
 
     val onGetStarted = {
-        viewModel.navigateTo(ScreenState.LANGUAGE_SELECT)
+        viewModel.navigateTo(ScreenState.ONBOARDING)
     }
 
     Box(

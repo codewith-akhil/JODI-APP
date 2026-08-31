@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FamilyRestroom
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Psychology
@@ -143,6 +144,9 @@ fun ProfileDetailScreen(
                         .fillMaxWidth()
                         .height(380.dp)
                         .background(Color.Black)
+                        .clickable {
+                            viewModel.openPhotoViewer(p.photoUrls, currentPhotoIndex)
+                        }
                 ) {
                     AsyncImage(
                         model = p.photoUrls.getOrElse(currentPhotoIndex) { p.photoUrls.first() },
@@ -188,6 +192,19 @@ fun ProfileDetailScreen(
                         }
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            IconButton(
+                                onClick = { viewModel.navigateTo(ScreenState.SAFETY_CENTER) },
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(Color(0x66000000), CircleShape)
+                                    .testTag("detail_report_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Flag,
+                                    contentDescription = "Report",
+                                    tint = PureWhite
+                                )
+                            }
                             IconButton(
                                 onClick = { viewModel.toggleShortlist(p.id) },
                                 modifier = Modifier
@@ -374,6 +391,32 @@ fun ProfileDetailScreen(
                             }
                         }
                         Divider(color = DividerColor.copy(alpha = 0.5f), thickness = 0.5.dp)
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Full Jathakam report page
+                    OutlinedButton(
+                        onClick = { viewModel.navigateTo(ScreenState.HOROSCOPE_REPORT) },
+                        shape = RoundedCornerShape(12.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, DeepBurgundy),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("view_full_horoscope_report")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = DeepBurgundy,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "View Full Jathakam Match Report",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepBurgundy
+                        )
                     }
                 }
             }

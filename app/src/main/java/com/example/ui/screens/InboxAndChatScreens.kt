@@ -1,5 +1,8 @@
 package com.example.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,6 +33,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.RemoveRedEye
 import androidx.compose.material.icons.filled.Verified
@@ -63,6 +67,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -477,6 +482,13 @@ fun ChatDetailScreen(
     val isPartnerTyping by viewModel.isPartnerTyping.collectAsState()
     var inputMessage by remember { mutableStateOf("") }
 
+    val context = LocalContext.current
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { pickedUri: Uri? ->
+        pickedUri?.let { viewModel.sendChatImage(it) }
+    }
+
     if (profile == null) return
     val p = profile!!
 
@@ -497,7 +509,10 @@ fun ChatDetailScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = { viewModel.navigateTo(ScreenState.MAIN_APP) },
+                    onClick = {
+                        viewModel.exitChat()
+                        viewModel.navigateTo(ScreenState.MAIN_APP)
+                    },
                     modifier = Modifier.testTag("chat_back_button")
                 ) {
                     Icon(
@@ -542,10 +557,10 @@ fun ChatDetailScreen(
                     )
                 }
 
-                IconButton(onClick = { viewModel.showToast("Initiating secure Matrimony voice call to ${p.name}...") }) {
+                IconButton(onClick = { viewModel.startCall(p, isVideo = false) }) {
                     Icon(imageVector = Icons.Default.Call, contentDescription = "Voice Call", tint = DeepBurgundy)
                 }
-                IconButton(onClick = { viewModel.showToast("Initiating secure video consultation with ${p.name}...") }) {
+                IconButton(onClick = { viewModel.startCall(p, isVideo = true) }) {
                     Icon(imageVector = Icons.Default.Videocam, contentDescription = "Video Call", tint = DeepBurgundy)
                 }
             }
@@ -588,6 +603,27 @@ fun ChatDetailScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    // Photo attachment via system photo picker → Firebase Storage
+                    IconButton(
+                        onClick = {
+                            imagePickerLauncher.launch(
+                                androidx.activity.result.PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
+                            )
+                        },
+                        modifier = Modifier
+                            .size(44.dp)
+                            .testTag("chat_attach_image_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Image,
+                            contentDescription = "Send Photo",
+                            tint = DeepBurgundy,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
                     OutlinedTextField(
                         value = inputMessage,
                         onValueChange = { inputMessage = it },

@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.WorkspacePremium
@@ -240,11 +241,51 @@ fun DiscoveryFeedView(
                     selectedLanguage = selectedLanguage.nativeName,
                     onLanguageClick = { viewModel.navigateTo(ScreenState.LANGUAGE_SELECT) },
                     onUpgradeClick = { viewModel.selectBottomTab(BottomTab.PREMIUM) },
-                    onEditProfileClick = { viewModel.navigateTo(ScreenState.EDIT_PROFILE) },
                     onVerificationClick = { viewModel.navigateTo(ScreenState.VERIFICATION_CENTER) },
+                    onNotificationsClick = { viewModel.navigateTo(ScreenState.NOTIFICATIONS) },
+                    onSettingsClick = { viewModel.navigateTo(ScreenState.SETTINGS) },
                     trustScore = verification.trustScore,
                     isVerified = verification.isFaceVerified || verification.isGovtIdVerified
                 )
+            }
+
+            // Search bar → Advanced Search page
+            item {
+                Surface(
+                    onClick = { viewModel.navigateTo(ScreenState.SEARCH_FILTER) },
+                    shape = RoundedCornerShape(14.dp),
+                    color = PureWhite,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .testTag("home_search_bar")
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = PrimaryBlue,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Search by name, city, nakshatra, caste...",
+                            fontSize = 13.sp,
+                            color = TextMuted,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = "Filters",
+                            tint = PrimaryEmerald,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
             }
 
             // Quick Profile & Trust Center Hub Card
@@ -261,6 +302,58 @@ fun DiscoveryFeedView(
             // Daily Recommendations Banner
             item {
                 DailyMatchBanner(onUpgradeClick = { viewModel.selectBottomTab(BottomTab.PREMIUM) })
+            }
+
+            // Success stories entry
+            item {
+                Surface(
+                    onClick = { viewModel.navigateTo(ScreenState.SUCCESS_STORIES) },
+                    shape = RoundedCornerShape(14.dp),
+                    color = PureWhite,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(14.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(LightGreen, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Favorite,
+                                contentDescription = null,
+                                tint = PrimaryEmerald,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Happily Ever After",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = "Read real wedding stories from Soulmate couples",
+                                fontSize = 11.sp,
+                                color = TextMuted
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = GoldAccent,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
             }
 
             // Filter Pills
@@ -416,8 +509,9 @@ fun SoulmateTopHeader(
     selectedLanguage: String,
     onLanguageClick: () -> Unit,
     onUpgradeClick: () -> Unit,
-    onEditProfileClick: () -> Unit,
     onVerificationClick: () -> Unit,
+    onNotificationsClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     trustScore: Int,
     isVerified: Boolean
 ) {
@@ -510,31 +604,45 @@ fun SoulmateTopHeader(
                 }
             }
 
-            // Edit Profile Pill
-            Surface(
-                onClick = onEditProfileClick,
-                shape = RoundedCornerShape(14.dp),
-                color = LightRose,
-                modifier = Modifier.testTag("home_edit_profile_pill")
+            // Notification Bell
+            IconButton(
+                onClick = onNotificationsClick,
+                modifier = Modifier
+                    .size(34.dp)
+                    .testTag("home_notifications_button")
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                BadgedBox(
+                    badge = {
+                        Badge(
+                            containerColor = PrimaryEmerald,
+                            modifier = Modifier.size(15.dp)
+                        ) {
+                            Text("3", fontSize = 8.sp, color = PureWhite)
+                        }
+                    }
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "My Profile",
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = "Notifications",
                         tint = DeepBurgundy,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(3.dp))
-                    Text(
-                        text = "Biodata",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = DeepBurgundy
+                        modifier = Modifier.size(20.dp)
                     )
                 }
+            }
+
+            // Settings Gear
+            IconButton(
+                onClick = onSettingsClick,
+                modifier = Modifier
+                    .size(34.dp)
+                    .testTag("home_settings_button")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings",
+                    tint = TextSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
             }
 
             // Premium Membership Pill

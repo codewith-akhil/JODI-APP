@@ -137,3 +137,104 @@ data class ProfileCreationDraft(
     val bio: String = "Passionate tech professional rooted in traditional family values. Enjoys travel, photography, and classical music. Looking for a caring, progressive partner to build a wonderful journey together."
 )
 
+// ---------- New models for the 18 added feature pages ----------
+
+/** In-app notification center item */
+data class AppNotification(
+    val id: String,
+    val type: String,            // INTEREST, MESSAGE, VISITOR, MATCH, SYSTEM, PAYMENT
+    val title: String,
+    val body: String,
+    val timeAgo: String,
+    val isRead: Boolean = false,
+    val profileId: String? = null
+)
+
+/** Payment history / transaction receipt */
+data class TransactionRecord(
+    val id: String,
+    val planTitle: String,
+    val planDuration: String,
+    val amount: String,
+    val paymentId: String,
+    val orderId: String,
+    val timestamp: String,
+    val status: String           // SUCCESS, FAILED, PENDING
+)
+
+/** Success stories / testimonials */
+data class SuccessStory(
+    val id: String,
+    val groomName: String,
+    val brideName: String,
+    val location: String,
+    val marriedOn: String,
+    val story: String,
+    val matchScore: Int,
+    val photoUrl: String
+)
+
+/** Help & Support FAQ */
+data class FaqItem(
+    val question: String,
+    val answer: String
+)
+
+/** Profile visibility & privacy controls */
+data class PrivacySettings(
+    val profileVisibility: String = "Everyone",      // Everyone, Verified Only, Hidden
+    val photoVisibility: String = "All Users",       // All Users, Connected Only, Private
+    val showHoroscope: Boolean = true,
+    val showIncome: Boolean = true,
+    val showFamilyDetails: Boolean = true,
+    val allowDirectCalls: Boolean = true,
+    val lastSeenVisible: Boolean = true,
+    val readReceiptsEnabled: Boolean = true,
+    val incognitoMode: Boolean = false
+)
+
+/** Referral program state */
+data class ReferralStats(
+    val referralCode: String = "SOUL2026",
+    val friendsReferred: Int = 0,
+    val premiumWeeksEarned: Int = 0,
+    val totalEarned: String = "₹ 0"
+)
+
+/** Advanced search filters */
+data class SearchFilters(
+    val query: String = "",
+    val minAge: Int = 21,
+    val maxAge: Int = 45,
+    val minHeight: String = "Any",
+    val maxHeight: String = "Any",
+    val religion: String = "Any",
+    val caste: String = "Any",
+    val nakshatra: String = "Any",
+    val city: String = "Any",
+    val education: String = "Any",
+    val income: String = "Any",
+    val maritalStatus: String = "Any",
+    val verifiedOnly: Boolean = false,
+    val diet: String = "Any"
+)
+
+/** Which destructive account action the OTP verification screen should perform */
+enum class PendingAccountAction { DEACTIVATE, DELETE }
+
+/** Active voice / video call session */
+data class CallSession(
+    val profile: Profile,
+    val isVideo: Boolean,
+    val callState: String = "RINGING"   // RINGING, CONNECTING, ONGOING, ENDED
+)
+
+/** Configuration for generic status screens (Success / Error) */
+data class StatusScreenData(
+    val kind: String = "SUCCESS",       // SUCCESS, ERROR, INFO
+    val title: String,
+    val message: String,
+    val actionLabel: String = "Continue",
+    val destination: String = "MAIN_APP"
+)
+

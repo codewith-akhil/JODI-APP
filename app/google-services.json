@@ -8,12 +8,20 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:288850011637:android:0560304053c563625becbc",
+        "mobilesdk_app_id": "1:288850011637:android:f25442e54a65c1cf5becbc",
         "android_client_info": {
-          "package_name": "com.soulmate.app"
+          "package_name": "com.soulmatematrimony.app"
         }
       },
       "oauth_client": [
+        {
+          "client_id": "288850011637-32ki85rlnb68800si5qm4af10tpduvo0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.soulmatematrimony.app",
+            "certificate_hash": "c8ccc4a2a4c523f9fedd7856cc36aad2eaefd736"
+          }
+        },
         {
           "client_id": "288850011637-3lh2kjika6tqlv5icnm896ojde4on7av.apps.googleusercontent.com",
           "client_type": 3

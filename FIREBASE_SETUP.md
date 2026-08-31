@@ -1,7 +1,7 @@
 # Soulmate (Jodi) — Firebase Backend Setup Guide
 
 This build is wired to Firebase project **soulmate-a511d** via the shipped
-`app/google-services.json` (applicationId `com.soulmate.app`).
+`app/google-services.json` (applicationId `com.soulmatematrimony.app`).
 
 Follow these one-time console steps to bring the real backend fully online.
 
@@ -13,7 +13,7 @@ Follow these one-time console steps to bring the real backend fully online.
 |----------|-----|--------|
 | **Phone** | Login OTP + Deactivate/Delete OTP verification (SMS) | Enable "Phone". For local testing add `+91 98765 43210` as a test number with code `123456` |
 | **Email Link (passwordless)** | "Email OTP" verification in Settings | Enable "Email link (passwordless, sign-in without password)" |
-| **Google** | "Continue with Google" button on Login | Enable "Google". **Add your debug & release SHA-1 fingerprints** in Project Settings → Your Android app (`com.soulmate.app`) |
+| **Google** | "Continue with Google" button on Login | Enable "Google". **Add your debug & release SHA-1 fingerprints** in Project Settings → Your Android app (`com.soulmatematrimony.app`) |
 
 > Google Sign-In uses the OAuth Web Client (client_type 3) already present in
 > the shipped google-services.json, resolved at runtime as
@@ -91,7 +91,7 @@ service firebase.storage {
 
 ## 4. App-side changes already applied
 
-- `applicationId` → `com.soulmate.app` (matches the JSON client)
+- `applicationId` → `com.soulmatematrimony.app` (matches the JSON client; the old `com.soulmate.app` name is reserved on Google Play)
 - Dependencies: `firebase-auth`, `firebase-database`, `firebase-storage`,
   `kotlinx-coroutines-play-services`, Credential Manager (`credentials`,
   `credentials-play-services-auth`, `googleid`)
@@ -109,3 +109,24 @@ service firebase.storage {
   transactions, verifications, then deletes the Firebase Auth account.
 - **Email OTP** uses Firebase's native email-link verification
   (`verifyBeforeUpdateEmail` / `sendEmailVerification`).
+
+## 6. App Check + Play Integrity (silent Phone Auth, no reCAPTCHA)
+
+`SoulmateApp.kt` (registered in the Manifest as the Application class)
+initializes Firebase and installs App Check **before** any Firebase service:
+
+- **Release builds** → `PlayIntegrityAppCheckProviderFactory` — Phone Auth
+  verifies silently in-app; the reCAPTCHA browser redirect never appears on
+  devices with Google Play services.
+- **Debug builds** → `DebugAppCheckProviderFactory` — emulators keep working.
+  Copy the token logged in Logcat (filter `AppCheck`) into
+  **Firebase Console → App Check → Apps → Manage debug tokens**.
+
+### One-time console registration
+1. **Firebase Console → App Check → Apps → Register** the Android app
+   (`com.soulmatematrimony.app`) with the **Play Integrity** provider
+   (the link also enables the Play Integrity API in Google Cloud).
+2. Start in **Monitoring** mode; flip **Enforce** on for Realtime Database and
+   Storage after a day or two of clean metrics.
+3. The old Firebase app entry `com.soulmate.app` can be deleted — it can never
+   be used on Play (package name permanently reserved by another developer).

@@ -1,54 +1,34 @@
 package com.example.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme =
-  darkColorScheme(
-    primary = RosePrimary,
-    secondary = GoldAccent,
-    tertiary = CrimsonRed,
-    background = DarkCardSurface,
-    surface = DarkCardSurface,
-    onPrimary = PureWhite,
-    onSecondary = DarkCardSurface,
-    onBackground = PureWhite,
-    onSurface = PureWhite,
-    surfaceVariant = DarkCardSurface,
-    onSurfaceVariant = LightGold,
-  )
-
-private val LightColorScheme =
+private val GreenBlueColorScheme =
   lightColorScheme(
-    primary = DeepBurgundy,
-    secondary = GoldAccent,
-    tertiary = RosePrimary,
-    background = WarmBackground,
+    primary = PrimaryEmerald,
+    secondary = PrimaryBlue,
+    tertiary = PrimaryTeal,
+    background = LightGreenBackground,
     surface = PureWhite,
     onPrimary = PureWhite,
-    onSecondary = TextPrimary,
+    onSecondary = PureWhite,
     onTertiary = PureWhite,
     onBackground = TextPrimary,
     onSurface = TextPrimary,
-    surfaceVariant = BorderLight,
+    surfaceVariant = LightBlue,
     onSurfaceVariant = TextSecondary,
   )
 
 @Composable
 fun MyApplicationTheme(
-  darkTheme: Boolean = false, // Use consistent luxurious warm ivory theme
+  darkTheme: Boolean = false,
   dynamicColor: Boolean = false,
   content: @Composable () -> Unit,
 ) {
-  val colorScheme = LightColorScheme
-
-  MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+  MaterialTheme(
+    colorScheme = GreenBlueColorScheme,
+    typography = Typography,
+    content = content
+  )
 }
-

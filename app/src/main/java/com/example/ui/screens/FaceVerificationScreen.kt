@@ -76,20 +76,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.ui.theme.BorderLight
-import com.example.ui.theme.CrimsonRed
-import com.example.ui.theme.DarkCardSurface
-import com.example.ui.theme.DeepBurgundy
+import com.example.ui.theme.DarkGold
 import com.example.ui.theme.GoldAccent
+import com.example.ui.theme.LightBlue
+import com.example.ui.theme.LightBlueBackground
 import com.example.ui.theme.LightGold
 import com.example.ui.theme.LightGreen
-import com.example.ui.theme.LightRose
+import com.example.ui.theme.LightGreenBackground
+import com.example.ui.theme.LightTeal
+import com.example.ui.theme.MintGreen
+import com.example.ui.theme.PrimaryBlue
+import com.example.ui.theme.PrimaryEmerald
+import com.example.ui.theme.PrimaryTeal
 import com.example.ui.theme.PureWhite
-import com.example.ui.theme.RosePrimary
+import com.example.ui.theme.SapphireBlue
+import com.example.ui.theme.SkyBlue
 import com.example.ui.theme.SuccessGreen
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
-import com.example.ui.theme.WarmBackground
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.ScreenState
 import kotlinx.coroutines.delay
@@ -154,7 +159,7 @@ fun FaceVerificationScreen(
                         Text(
                             text = "Biometric liveness & photo match",
                             fontSize = 11.sp,
-                            color = LightGold
+                            color = LightBlue
                         )
                     }
                 },
@@ -170,10 +175,10 @@ fun FaceVerificationScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DeepBurgundy)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBlue)
             )
         },
-        containerColor = Color(0xFF0F0B13),
+        containerColor = LightGreenBackground,
         modifier = modifier
     ) { innerPadding ->
         Column(
@@ -190,7 +195,7 @@ fun FaceVerificationScreen(
                     text = if (isVerificationComplete) "Face Match Verified 100%! 🎉" else "Selfie Liveness Verification",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isVerificationComplete) SuccessGreen else PureWhite,
+                    color = if (isVerificationComplete) SuccessGreen else PrimaryBlue,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(6.dp))
@@ -200,7 +205,7 @@ fun FaceVerificationScreen(
                     else
                         "Position your face inside the frame. Follow the on-screen gestures to earn the Blue Trust Shield.",
                     fontSize = 13.sp,
-                    color = Color.LightGray,
+                    color = TextSecondary,
                     textAlign = TextAlign.Center
                 )
             }
@@ -210,7 +215,8 @@ fun FaceVerificationScreen(
                 modifier = Modifier
                     .size(280.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF1E1626)),
+                    .background(LightBlue)
+                    .border(3.dp, PrimaryEmerald, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 // Background simulated camera feed
@@ -231,9 +237,9 @@ fun FaceVerificationScreen(
                     // Target Oval Guide
                     drawOval(
                         color = when {
-                            isVerificationComplete -> Color(0xFF4CAF50)
-                            isScanning -> Color(0xFFFFD700)
-                            else -> Color.White.copy(alpha = 0.7f)
+                            isVerificationComplete -> PrimaryEmerald
+                            isScanning -> PrimaryTeal
+                            else -> SkyBlue.copy(alpha = 0.8f)
                         },
                         topLeft = Offset(left, top),
                         size = Size(ovalWidth, ovalHeight),
@@ -248,7 +254,7 @@ fun FaceVerificationScreen(
                         val laserY = top + (ovalHeight * laserPosition)
                         drawLine(
                             brush = Brush.horizontalGradient(
-                                listOf(Color.Transparent, Color(0xFFFFD700), Color(0xFF4CAF50), Color.Transparent)
+                                listOf(Color.Transparent, SkyBlue, PrimaryEmerald, Color.Transparent)
                             ),
                             start = Offset(left, laserY),
                             end = Offset(left + ovalWidth, laserY),
@@ -280,8 +286,9 @@ fun FaceVerificationScreen(
             // Gesture & Progress Indicator Card
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1626)),
-                border = BorderStroke(1.dp, if (isVerificationComplete) SuccessGreen else Color(0xFF3B2E4A)),
+                colors = CardDefaults.cardColors(containerColor = PureWhite),
+                border = BorderStroke(1.dp, if (isVerificationComplete) SuccessGreen else BorderLight),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -294,7 +301,7 @@ fun FaceVerificationScreen(
                             Icon(
                                 imageVector = if (isVerificationComplete) Icons.Default.Verified else Icons.Default.Face,
                                 contentDescription = null,
-                                tint = if (isVerificationComplete) SuccessGreen else GoldAccent,
+                                tint = if (isVerificationComplete) SuccessGreen else PrimaryEmerald,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -306,7 +313,7 @@ fun FaceVerificationScreen(
                                 },
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = PureWhite
+                                color = TextPrimary
                             )
                         }
 
@@ -315,7 +322,7 @@ fun FaceVerificationScreen(
                                 text = "${(scanProgress * 100).toInt()}%",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = GoldAccent
+                                color = PrimaryEmerald
                             )
                         }
                     }
@@ -328,8 +335,8 @@ fun FaceVerificationScreen(
                             .fillMaxWidth()
                             .height(6.dp)
                             .clip(RoundedCornerShape(3.dp)),
-                        color = if (isVerificationComplete) SuccessGreen else GoldAccent,
-                        trackColor = Color(0xFF3B2E4A),
+                        color = if (isVerificationComplete) SuccessGreen else PrimaryEmerald,
+                        trackColor = LightGreen,
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -364,7 +371,7 @@ fun FaceVerificationScreen(
                         enabled = !isScanning,
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = DeepBurgundy,
+                            containerColor = PrimaryEmerald,
                             contentColor = PureWhite
                         ),
                         modifier = Modifier
@@ -421,14 +428,14 @@ fun FaceVerificationScreen(
                     Icon(
                         imageVector = Icons.Default.Lock,
                         contentDescription = null,
-                        tint = Color.Gray,
+                        tint = TextMuted,
                         modifier = Modifier.size(12.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "256-bit Encrypted. Biometrics are never shared publicly.",
                         fontSize = 11.sp,
-                        color = Color.Gray
+                        color = TextMuted
                     )
                 }
             }
@@ -452,7 +459,7 @@ private fun GestureStepRow(
             modifier = Modifier
                 .size(18.dp)
                 .clip(CircleShape)
-                .background(if (isPassed) SuccessGreen else Color(0xFF3B2E4A)),
+                .background(if (isPassed) SuccessGreen else LightBlue),
             contentAlignment = Alignment.Center
         ) {
             if (isPassed) {
@@ -467,7 +474,7 @@ private fun GestureStepRow(
                     text = "$stepNumber",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.LightGray
+                    color = PrimaryBlue
                 )
             }
         }
@@ -475,7 +482,7 @@ private fun GestureStepRow(
         Text(
             text = text,
             fontSize = 12.sp,
-            color = if (isPassed) PureWhite else Color.LightGray,
+            color = if (isPassed) TextPrimary else TextSecondary,
             fontWeight = if (isPassed) FontWeight.SemiBold else FontWeight.Normal
         )
     }

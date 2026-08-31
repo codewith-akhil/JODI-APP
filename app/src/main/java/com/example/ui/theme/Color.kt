@@ -2,32 +2,50 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Unique Soulmate Romantic Palette: Deep Royal Velvet Amethyst, Sunset Coral Berry, and Luminous Warm Gold
-val DeepBurgundy = Color(0xFF3B1042)      // Royal Velvet Amethyst
-val CrimsonRed = Color(0xFFE11D48)        // Vibrant Rose Berry
-val RosePrimary = Color(0xFFF43F5E)       // Luminous Sunset Coral Pink
-val LightRose = Color(0xFFFDF2F4)         // Soft Blossom Tint
-val RoseSoft = Color(0xFFFFE4E8)          // Rose Silk Accent
+// Pure Refreshing Green & Blue Matrimonial Design System
+// Strictly NO dark, black, rose, red, or pink colors.
 
-val GoldAccent = Color(0xFFF59E0B)        // Luminous Royal Honey Gold
-val DarkGold = Color(0xFFD97706)          // Rich Vedic Amber
-val LightGold = Color(0xFFFEF3C7)         // Warm Champagne Light
+// Primary Brand Greens & Blues
+val PrimaryEmerald = Color(0xFF059669)     // Rich Emerald Green
+val PrimaryBlue = Color(0xFF0284C7)        // Radiant Ocean Blue
+val PrimaryTeal = Color(0xFF0D9488)        // Auspicious Teal Cyan
+val SapphireBlue = Color(0xFF2563EB)       // Deep Royal Sapphire Blue
+val MintGreen = Color(0xFF10B981)          // Vibrant Mint Green
+val SkyBlue = Color(0xFF38BDF8)            // Serene Sky Blue
 
-val RoyalPurple = Color(0xFF6B21A8)       // Auspicious Royal Purple
-val RomanticViolet = Color(0xFF8B5CF6)    // Soft Violet Lavender
+// Light Backgrounds & Card Surfaces (Fresh, Bright, Pristine)
+val LightGreenBackground = Color(0xFFF0FDF4) // Soft Emerald Mint Canvas
+val LightBlueBackground = Color(0xFFF0F9FF)  // Clean Ice Blue Canvas
+val PureWhite = Color(0xFFFFFFFF)            // Crisp High-Contrast White
+val LightGreen = Color(0xFFDCFCE7)           // Light Mint Surface
+val LightBlue = Color(0xFFE0F2FE)            // Light Sky Surface
+val LightTeal = Color(0xFFCCFBF1)            // Soft Teal Tint
+val SurfaceLight = Color(0xFFF8FAFC)         // Neutral Fresh Canvas
 
-val WarmBackground = Color(0xFFFAF8F5)    // Serene Warm Linen/Ivory
-val PureWhite = Color(0xFFFFFFFF)         // Crisp High-Contrast White
-val DarkCardSurface = Color(0xFF1E1424)   // Midnight Obsidian Plum
+// Text & Content Colors (High Contrast Deep Navy & Slate Blue - NEVER Pure Black)
+val TextPrimary = Color(0xFF0F172A)          // Deep Navy Slate Text (Crisp)
+val TextSecondary = Color(0xFF334155)        // Mid Slate Blue Text
+val TextMuted = Color(0xFF64748B)            // Soft Slate Placeholder Text
+val TextOnColor = Color(0xFFFFFFFF)          // White text for colored buttons
 
-val TextPrimary = Color(0xFF1B1421)       // Ultra-Dark Crisp Text (High Contrast)
-val TextSecondary = Color(0xFF5E5466)     // Slate Text
-val TextMuted = Color(0xFF8F8597)         // Soft Placeholder Text
+// Accents & Badges
+val SuccessGreen = Color(0xFF059669)         // Verified Trust Green
+val VerifiedBlue = Color(0xFF0284C7)         // Verified Identity Blue
+val GoldAccent = Color(0xFFD97706)           // Auspicious Golden Amber (Stars/Kalyanam)
+val DarkGold = Color(0xFFB45309)             // Deep Honey Gold
+val LightGold = Color(0xFFFEF3C7)            // Soft Champagne Light
 
-val SuccessGreen = Color(0xFF059669)      // Emerald Trust Green
-val LightGreen = Color(0xFFECFDF5)        // Mint Green Badge
-val VerifiedBlue = Color(0xFF2563EB)      // Royal Sapphire Blue
-val LightBlue = Color(0xFFEFF6FF)         // Ice Blue Surface
+// Borders & Dividers
+val BorderLight = Color(0xFFE2E8F0)          // Soft Clean Border
+val DividerColor = Color(0xFFF1F5F9)         // Subtle Clean Divider
 
-val BorderLight = Color(0xFFE7DFE4)       // Soft Border
-val DividerColor = Color(0xFFEFE8EC)      // Subtle Divider
+// Backward-Compatibility Aliases mapped strictly to GREEN & BLUE (NO red/rose/dark/black)
+val DeepBurgundy = PrimaryBlue               // Mapped to Radiant Ocean Blue
+val CrimsonRed = PrimaryEmerald              // Mapped to Rich Emerald Green
+val RosePrimary = PrimaryEmerald             // Mapped to Rich Emerald Green
+val LightRose = LightGreen                   // Mapped to Light Mint
+val RoseSoft = LightBlue                     // Mapped to Light Sky
+val RoyalPurple = PrimaryBlue                // Mapped to Radiant Ocean Blue
+val RomanticViolet = PrimaryTeal             // Mapped to Auspicious Teal Cyan
+val WarmBackground = LightGreenBackground    // Mapped to Soft Mint Canvas
+val DarkCardSurface = PureWhite              // Mapped to Pure White

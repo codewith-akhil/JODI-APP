@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -75,30 +76,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.R
 import com.example.model.Profile
-import com.example.ui.theme.BorderLight
-import com.example.ui.theme.CrimsonRed
-import com.example.ui.theme.DarkCardSurface
-import com.example.ui.theme.DarkGold
-import com.example.ui.theme.DeepBurgundy
-import com.example.ui.theme.GoldAccent
-import com.example.ui.theme.LightBlue
-import com.example.ui.theme.LightGold
-import com.example.ui.theme.LightGreen
-import com.example.ui.theme.LightRose
-import com.example.ui.theme.PureWhite
-import com.example.ui.theme.RosePrimary
-import com.example.ui.theme.SuccessGreen
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
-import com.example.ui.theme.VerifiedBlue
-import com.example.ui.theme.WarmBackground
+import com.example.ui.theme.*
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.BottomTab
 import com.example.viewmodel.ScreenState
@@ -449,16 +435,19 @@ fun SoulmateTopHeader(
         ) {
             Box(
                 modifier = Modifier
-                    .size(38.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
-                    .background(DeepBurgundy),
+                    .background(PureWhite)
+                    .border(1.5.dp, PrimaryEmerald, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "S",
-                    color = GoldAccent,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Black
+                Image(
+                    painter = painterResource(id = R.drawable.ic_jodii_logo),
+                    contentDescription = "Soulmate Matrimony Logo",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))

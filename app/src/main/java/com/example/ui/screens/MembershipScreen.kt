@@ -62,22 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.MembershipPlan
 import com.example.payment.PaymentUiState
-import com.example.ui.theme.BorderLight
-import com.example.ui.theme.CrimsonRed
-import com.example.ui.theme.DarkCardSurface
-import com.example.ui.theme.DarkGold
-import com.example.ui.theme.DeepBurgundy
-import com.example.ui.theme.DividerColor
-import com.example.ui.theme.GoldAccent
-import com.example.ui.theme.LightGold
-import com.example.ui.theme.LightGreen
-import com.example.ui.theme.LightRose
-import com.example.ui.theme.PureWhite
-import com.example.ui.theme.SuccessGreen
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
-import com.example.ui.theme.WarmBackground
+import com.example.ui.theme.*
 import com.example.viewmodel.AppViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -284,10 +269,10 @@ fun MembershipScreen(
                         Box(
                             modifier = Modifier
                                 .size(32.dp)
-                                .background(Color(0xFF0C2340), RoundedCornerShape(8.dp)),
+                                .background(PrimaryBlue, RoundedCornerShape(8.dp)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("R", color = Color(0xFF0284C7), fontSize = 18.sp, fontWeight = FontWeight.Black)
+                            Text("R", color = PureWhite, fontSize = 18.sp, fontWeight = FontWeight.Black)
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
@@ -563,8 +548,8 @@ fun PlanCard(
                 Button(
                     onClick = onSelect,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (plan.isPopular) GoldAccent else DeepBurgundy,
-                        contentColor = if (plan.isPopular) DarkCardSurface else PureWhite
+                        containerColor = if (plan.isPopular) PrimaryEmerald else PrimaryBlue,
+                        contentColor = PureWhite
                     ),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier

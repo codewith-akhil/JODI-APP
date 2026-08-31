@@ -96,13 +96,17 @@ fun MainAppScreen(
     modifier: Modifier = Modifier
 ) {
     val currentTab by viewModel.currentBottomTab.collectAsState()
+    val unreadNotifications by viewModel.unreadNotificationCount.collectAsState()
+    val chatThreads by viewModel.chatThreads.collectAsState()
+    val unreadChats = chatThreads.sumOf { it.unreadCount }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         bottomBar = {
             SoulmateBottomNavigationBar(
                 currentTab = currentTab,
-                onTabSelected = { viewModel.selectBottomTab(it) }
+                onTabSelected = { viewModel.selectBottomTab(it) },
+                unreadChats = unreadChats
             )
         }
     ) { innerPadding ->
@@ -127,7 +131,8 @@ fun MainAppScreen(
 fun SoulmateBottomNavigationBar(
     currentTab: BottomTab,
     onTabSelected: (BottomTab) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    unreadChats: Int = 0
 ) {
     NavigationBar(
         containerColor = PureWhite,
@@ -165,7 +170,11 @@ fun SoulmateBottomNavigationBar(
             onClick = { onTabSelected(BottomTab.INBOX) },
             icon = {
                 BadgedBox(
-                    badge = { Badge { Text("3") } }
+                    badge = {
+                        if (unreadChats > 0) {
+                            Badge { Text(if (unreadChats > 9) "9+" else unreadChats.toString()) }
+                        }
+                    }
                 ) {
                     Icon(Icons.Default.Mail, contentDescription = "Inbox")
                 }
@@ -221,8 +230,8 @@ fun DiscoveryFeedView(
 
     val filteredProfiles = when (selectedFilter) {
         "100% Verified" -> profiles.filter { it.verified }
-        "Kochi & Ernakulam" -> profiles.filter { it.city.contains("Ernakulam", true) || it.district.contains("Kochi", true) }
-        "High Porutham (9/10)" -> profiles.filter { it.dosham.contains("No Dosham", true) }
+        "Kochi & Ernakulam" -> profiles.filter { it.city.contains("Kochi", true) || it.district.contains("Ernakulam", true) }
+        "High Porutham (9/10)" -> profiles.filter { viewModel.getCompatibilityReport(it).poruthamCount >= 8 }
         "Engineers & Doctors" -> profiles.filter { it.profession.contains("Engineer", true) || it.profession.contains("Physician", true) || it.profession.contains("Doctor", true) }
         "Recent Profiles" -> profiles.filter { it.joinedDaysAgo <= 2 }
         else -> profiles
@@ -245,7 +254,9 @@ fun DiscoveryFeedView(
                     onNotificationsClick = { viewModel.navigateTo(ScreenState.NOTIFICATIONS) },
                     onSettingsClick = { viewModel.navigateTo(ScreenState.SETTINGS) },
                     trustScore = verification.trustScore,
-                    isVerified = verification.isFaceVerified || verification.isGovtIdVerified
+                    isVerified = verification.isFaceVerified || verification.isGovtIdVerified,
+                    onEditProfileClick = { viewModel.navigateTo(ScreenState.EDIT_PROFILE) },
+                    unreadNotifications = unreadNotifications
                 )
             }
 
@@ -513,7 +524,9 @@ fun SoulmateTopHeader(
     onNotificationsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     trustScore: Int,
-    isVerified: Boolean
+    isVerified: Boolean,
+    onEditProfileClick: () -> Unit = {},
+    unreadNotifications: Int = 0
 ) {
     Row(
         modifier = Modifier
@@ -617,7 +630,10 @@ fun SoulmateTopHeader(
                             containerColor = PrimaryEmerald,
                             modifier = Modifier.size(15.dp)
                         ) {
-                            Text("3", fontSize = 8.sp, color = PureWhite)
+                            Text(
+                                if (unreadNotifications > 9) "9+" else unreadNotifications.toString(),
+                                fontSize = 8.sp, color = PureWhite
+                            )
                         }
                     }
                 ) {

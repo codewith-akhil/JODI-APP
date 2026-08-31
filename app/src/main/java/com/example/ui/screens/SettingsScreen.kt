@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -65,6 +66,7 @@ import coil.compose.AsyncImage
 import com.example.model.PendingAccountAction
 import com.example.ui.theme.*
 import com.example.viewmodel.AppViewModel
+import com.example.viewmodel.ScreenState
 
 /**
  * Settings hub — account management, privacy, legal, support and the
@@ -82,6 +84,8 @@ fun SettingsScreen(
     val emailState by viewModel.emailVerificationState.collectAsState()
 
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showEmailDialog by remember { mutableStateOf(false) }
+    var emailInput by remember { mutableStateOf("") }
 
     Column(
         modifier = modifier
@@ -243,7 +247,10 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Button(
-                            onClick = { viewModel.navigateTo(ScreenState.EDIT_PROFILE) },
+                            onClick = {
+                                emailInput = userEmail
+                                showEmailDialog = true
+                            },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = PrimaryBlue, contentColor = PureWhite
                             ),
@@ -443,6 +450,61 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
         }
+    }
+
+    // ---- Add / Change e-mail dialog (triggers Firebase email-OTP link) ----
+    if (showEmailDialog) {
+        AlertDialog(
+            onDismissRequest = { showEmailDialog = false },
+            title = {
+                Text(
+                    text = if (userEmail.isBlank()) "Add E-mail Address" else "Change E-mail Address",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "We'll send a verification link to this address. Tap the link to confirm — this is your e-mail OTP verification.",
+                        fontSize = 13.sp,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = emailInput,
+                        onValueChange = { emailInput = it },
+                        singleLine = true,
+                        label = { Text("E-mail address") },
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showEmailDialog = false
+                        viewModel.updateUserEmail(emailInput.trim())
+                    },
+                    enabled = android.util.Patterns.EMAIL_ADDRESS
+                        .matcher(emailInput.trim()).matches(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = PrimaryBlue, contentColor = PureWhite
+                    )
+                ) {
+                    Text("Send Verification Link", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEmailDialog = false }) {
+                    Text("Cancel", color = TextSecondary)
+                }
+            }
+        )
     }
 
     // ---- Logout confirmation dialog ----

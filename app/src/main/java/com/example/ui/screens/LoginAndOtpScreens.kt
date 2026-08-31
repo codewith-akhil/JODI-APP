@@ -92,6 +92,7 @@ fun LoginScreen(
     val selectedLanguage by viewModel.selectedLanguage.collectAsState()
     val phoneNumber by viewModel.phoneNumber.collectAsState()
     val countryCode by viewModel.countryCode.collectAsState()
+    val context = LocalContext.current
     var countryDropdownExpanded by remember { mutableStateOf(false) }
 
     val countryCodes = listOf(
@@ -461,7 +462,7 @@ fun OtpVerificationScreen(
 
     val context = LocalContext.current
     val activity = context as? Activity
-    var secondsLeft by remember { mutableIntStateOf(30) }
+    var secondsLeft by remember { mutableIntStateOf(60) }  // Rule #1: 60s resend cooldown
 
     LaunchedEffect(key1 = secondsLeft) {
         if (secondsLeft > 0) {
@@ -635,14 +636,14 @@ fun OtpVerificationScreen(
         ) {
             if (secondsLeft > 0) {
                 Text(
-                    text = "Resend OTP in 00:${if (secondsLeft < 10) "0$secondsLeft" else secondsLeft}",
+                    text = "Resend OTP in ${secondsLeft}s",
                     fontSize = 13.sp,
                     color = TextSecondary
                 )
             } else {
                 TextButton(
                     onClick = {
-                        secondsLeft = 30
+                        secondsLeft = 60
                         activity?.let { viewModel.requestOtp(it) }
                     },
                     modifier = Modifier.testTag("resend_otp_button")

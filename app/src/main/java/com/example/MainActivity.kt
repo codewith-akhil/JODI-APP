@@ -102,7 +102,7 @@ fun SoulmateApp(
       ScreenState.MAIN_APP -> MainAppScreen(viewModel = viewModel, modifier = modifier.fillMaxSize())
       ScreenState.PROFILE_DETAIL -> ProfileDetailScreen(viewModel = viewModel, modifier = modifier.fillMaxSize())
       ScreenState.EDIT_PROFILE -> EditProfileScreen(viewModel = viewModel, modifier = modifier.fillMaxSize())
-      ScreenState.PHOTO_MANAGER -> PhotoManagerView(viewModel = viewModel, modifier = modifier.fillMaxSize())
+      ScreenState.PHOTO_MANAGER -> PhotoManagerView(viewModel = viewModel, modifier = modifier.fillMaxSize(), showBackButton = true)
       ScreenState.CHAT_DETAIL -> ChatDetailScreen(viewModel = viewModel, modifier = modifier.fillMaxSize())
       ScreenState.MEMBERSHIP -> MembershipScreen(viewModel = viewModel, modifier = modifier.fillMaxSize())
       ScreenState.VERIFICATION_CENTER -> VerificationScreen(viewModel = viewModel, modifier = modifier.fillMaxSize())

@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.ui.theme.*
 import com.example.viewmodel.AppViewModel
+import com.example.viewmodel.ScreenState
 import kotlinx.coroutines.launch
 
 /**

@@ -27,10 +27,11 @@ import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VideocamOff
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -89,6 +90,11 @@ fun CallScreen(
         animationSpec = infiniteRepeatable(tween(1600), RepeatMode.Restart),
         label = "rippleAlpha"
     )
+
+    // Back gesture ends the call (same as the red button)
+    androidx.activity.compose.BackHandler {
+        viewModel.endCall()
+    }
 
     // Auto-connect after a short ring (simulated accept by partner)
     LaunchedEffect(session.callState) {
@@ -194,6 +200,8 @@ fun CallScreen(
 
         Text(
             text = when {
+                session.callState == "CONNECTING" -> "Connecting..."
+                session.callState == "ENDED" -> "Call Ended"
                 !isOngoing -> "Ringing..."
                 micMuted -> "Muted • ${formatCallDuration(elapsedSeconds)}"
                 else -> "Connected • ${formatCallDuration(elapsedSeconds)}"
@@ -214,7 +222,7 @@ fun CallScreen(
                 onClick = { micMuted = !micMuted }
             )
             CallControlButton(
-                icon = if (speakerOn) Icons.Default.VolumeUp else Icons.Default.VolumeUp,
+                icon = if (speakerOn) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
                 label = "Speaker",
                 active = speakerOn,
                 onClick = { speakerOn = !speakerOn }

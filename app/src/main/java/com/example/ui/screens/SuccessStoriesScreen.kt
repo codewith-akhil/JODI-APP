@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.ui.theme.*
 import com.example.viewmodel.AppViewModel
+import com.example.viewmodel.ScreenState
 
 /**
  * Success Stories — testimonials of couples who found each other

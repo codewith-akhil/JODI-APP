@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
 import com.example.viewmodel.AppViewModel
+import com.example.viewmodel.ScreenState
 
 /**
  * Legal pages: Privacy Policy and Terms of Service.

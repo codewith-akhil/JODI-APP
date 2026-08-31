@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
 import com.example.viewmodel.AppViewModel
+import com.example.viewmodel.ScreenState
 
 /**
  * Refer & Earn — personal referral code, share sheet, earnings stats

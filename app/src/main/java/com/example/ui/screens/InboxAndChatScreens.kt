@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -56,6 +57,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -487,6 +489,16 @@ fun ChatDetailScreen(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { pickedUri: Uri? ->
         pickedUri?.let { viewModel.sendChatImage(it) }
+    }
+
+    // Cancel the Firebase chat listener when the screen leaves composition
+    // (back gesture, call screen, photo viewer, etc.) and intercept system back.
+    DisposableEffect(Unit) {
+        onDispose { viewModel.exitChat() }
+    }
+    BackHandler {
+        viewModel.exitChat()
+        viewModel.navigateTo(ScreenState.MAIN_APP)
     }
 
     if (profile == null) return

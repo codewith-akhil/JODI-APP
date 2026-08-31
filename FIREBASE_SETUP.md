@@ -130,3 +130,38 @@ initializes Firebase and installs App Check **before** any Firebase service:
    Storage after a day or two of clean metrics.
 3. The old Firebase app entry `com.soulmate.app` can be deleted — it can never
    be used on Play (package name permanently reserved by another developer).
+
+## 7. Business Rules & Server-Side Enforcement (authoritative)
+
+The backend is the **final authority** for verification, membership, daily
+limits, blocking and eligibility (RTDB rules deny direct user writes; every
+restricted mutation flows through Cloud Functions callables).
+
+### Deploy the enforcement layer
+```bash
+cd JODI-APP
+firebase deploy --only database        # database.rules.json
+firebase deploy --only functions       # functions/ (Node 20)
+firebase functions:secrets:set RAZORPAY_KEY_ID
+firebase functions:secrets:set RAZORPAY_KEY_SECRET
+```
+
+### What is enforced where
+| Rule | Client (UX) | Server (authority) |
+|---|---|---|
+| 18+ age, DOB-derived age | `completeProfileCreation` gate | `users.dobMillis` validate + functions |
+| 6-digit OTP, 5-min validity, 60s resend, 5 attempts | OTP screens + VM counters | Firebase Phone Auth |
+| One account per phone | `registerPhoneIndex` | `phone_index` rules (write-once) |
+| Verified-only matching/chat | VM gates + verification prompt | `preflight()` in callables |
+| Free 10 match requests/day | local counter mirror | `sendMatchRequest` + counters (server-written only) |
+| Free 1 message user/day | local counter mirror | `sendMessage` + counters |
+| Premium ₹99 / 30 days | MembershipScreen | `activatePremium` (Razorpay HMAC verified server-side) |
+| Auto-downgrade after expiry | `isPremium` expiry check | tier/expiry written only by functions |
+| Two plans only | SampleData (FREE ₹0 / PREMIUM ₹99) | `app_config/limits` (admin-changeable) |
+| Block / report unlimited | SafetyCenter | rules (append-only) + callable states |
+| Profile states | verification center | `adminVerifyProfile`, `adminSuspendUser`, `adminBanUser` … |
+
+### Admin access
+Grant an admin once: `admin.auth().setCustomUserClaims(uid, { admin: true })`
+— then the `admin*` callables become usable for verification approval,
+suspension, banning and moderation.

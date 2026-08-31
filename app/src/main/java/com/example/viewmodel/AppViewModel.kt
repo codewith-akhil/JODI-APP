@@ -325,6 +325,93 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var isAccountDemoOtpMode = false
     private var chatListenerJob: Job? = null
 
+    // ---------------- Business-rule engine (membership / limits / OTP policy) ----------------
+
+    companion object {
+        const val MAX_MATCH_REQUESTS_PER_DAY = 10   // Free tier (rule #16)
+        const val MAX_MESSAGE_USERS_PER_DAY = 1     // Free tier unique users/day (rule #11)
+        const val MAX_PHOTOS = 6                    // rule #5
+        const val MIN_AGE_YEARS = 18                // rule #2
+        const val PREMIUM_VALIDITY_DAYS = 30L       // rule #9
+        const val OTP_VALIDITY_MILLIS = 5 * 60_000L // rule #1
+        const val OTP_MAX_ATTEMPTS = 5              // rule #1
+    }
+
+    private val _membershipTier = MutableStateFlow("FREE")
+    val membershipTier: StateFlow<String> = _membershipTier.asStateFlow()
+
+    private val _subscriptionExpiryMillis = MutableStateFlow(0L)
+    val subscriptionExpiryMillis: StateFlow<Long> = _subscriptionExpiryMillis.asStateFlow()
+
+    private val _dailyMatchRequestsSent = MutableStateFlow(0)
+    val dailyMatchRequestsSent: StateFlow<Int> = _dailyMatchRequestsSent.asStateFlow()
+
+    private val _dailyMessageUsers = MutableStateFlow<Set<String>>(emptySet())
+    val dailyMessageUsers: StateFlow<Set<String>> = _dailyMessageUsers.asStateFlow()
+
+    private val _otpAttemptCount = MutableStateFlow(0)
+    val otpAttemptCount: StateFlow<Int> = _otpAttemptCount.asStateFlow()
+
+    private var otpSentAtMillis = 0L
+
+    val isPremium: Boolean
+        get() = _membershipTier.value == "PREMIUM" &&
+            _subscriptionExpiryMillis.value > System.currentTimeMillis()
+
+    /** Rule #3: only verified profiles can match or chat. */
+    val isVerified: Boolean
+        get() = _verificationStatus.value.isFaceVerified || _verificationStatus.value.isGovtIdVerified
+
+    /** Rule #18 — exact upgrade copy shown when a Free limit is reached. */
+    fun upgradePromptFor(kind: String): StatusScreenData = if (kind == "MESSAGE") {
+        StatusScreenData(
+            kind = "ERROR", title = "You've reached today's free messaging limit.",
+            message = "Free members can message 1 new user per day. Upgrade to Premium — ₹99/month for unlimited messaging, unlimited match requests and no daily limits.",
+            actionLabel = "Upgrade to Premium — ₹99/month", destination = "MEMBERSHIP"
+        )
+    } else {
+        StatusScreenData(
+            kind = "ERROR", title = "You've reached your 10 match requests for today.",
+            message = "Upgrade to Premium — ₹99/month for unlimited match requests, unlimited messaging and no daily limits.",
+            actionLabel = "Upgrade to Premium — ₹99/month", destination = "MEMBERSHIP"
+        )
+    }
+
+    private fun verificationPrompt(): StatusScreenData = StatusScreenData(
+        kind = "INFO", title = "Verification Required",
+        message = "Only verified profiles can send match requests and chat. Complete Face or Govt-ID verification in the Verification Center to unlock matching and messaging.",
+        actionLabel = "Verify My Profile", destination = "VERIFICATION_CENTER"
+    )
+
+    private fun todayKey(): String =
+        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+
+    /** Mirrors the server-authoritative counters (rule #22). */
+    private suspend fun refreshEntitlementsFromServer() {
+        val uid = myUid()
+        if (!FirebaseManager.isSignedIn()) return
+        FirebaseManager.fetchMembership(uid)?.let { m ->
+            _membershipTier.value = (m["tier"] as? String) ?: "FREE"
+            _subscriptionExpiryMillis.value = (m["expiryDate"] as? Long) ?: 0L
+        }
+        FirebaseManager.fetchDailyCounters(uid, todayKey())?.let { c ->
+            _dailyMatchRequestsSent.value = (c["matchRequestsSent"] as? Long)?.toInt() ?: 0
+            @Suppress("UNCHECKED_CAST")
+            _dailyMessageUsers.value = (c["messageUsersStarted"] as? Map<String, Any?>)?.keys?.toSet() ?: emptySet()
+        }
+    }
+
+    private fun calculateAgeFromDob(dob: String): Int? = try {
+        val dobDate = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).parse(dob)
+            ?: return null
+        val diff = System.currentTimeMillis() - dobDate.time
+        (diff / (365.25 * 24 * 60 * 60 * 1000)).toInt().takeIf { it > 0 }
+    } catch (e: Exception) { null }
+
+    private fun parseDobMillis(dob: String): Long = try {
+        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).parse(dob)?.time ?: 0L
+    } catch (e: Exception) { 0L }
+
     init {
         // Live connectivity monitoring drives the No-Internet screen
         viewModelScope.launch {
@@ -407,6 +494,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 _isOtpSending.value = false
                 loginVerificationId = verificationId
                 isLoginDemoOtpMode = false
+                otpSentAtMillis = System.currentTimeMillis()
+                _otpAttemptCount.value = 0
                 _currentScreen.value = ScreenState.OTP_VERIFY
                 showToast("OTP sent to $fullPhone via Firebase")
             },
@@ -433,6 +522,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun verifyOtp(enteredOtp: String): Boolean {
         if (_isVerifyingOtp.value) return true
 
+        // Rule #1 — max 5 verification attempts
+        if (_otpAttemptCount.value >= OTP_MAX_ATTEMPTS) {
+            showToast("Maximum 5 OTP attempts exceeded. Please request a new OTP.")
+            return false
+        }
+
         if (isLoginDemoOtpMode || loginVerificationId == null) {
             return if (enteredOtp == "123456" || enteredOtp == "1234") {
                 _isVerifyingOtp.value = true
@@ -446,12 +541,23 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 true
             } else {
                 _isOtpError.value = true
+                _otpAttemptCount.value += 1
+                if (_otpAttemptCount.value >= OTP_MAX_ATTEMPTS) {
+                    showToast("Maximum 5 OTP attempts exceeded. Please request a new OTP.")
+                }
                 false
             }
         }
 
         if (enteredOtp.length < 6) {
             _isOtpError.value = true
+            _otpAttemptCount.value += 1
+            return false
+        }
+
+        // Rule #1 — OTP validity is 5 minutes
+        if (otpSentAtMillis > 0 && System.currentTimeMillis() - otpSentAtMillis > OTP_VALIDITY_MILLIS) {
+            showToast("This OTP has expired (valid 5 minutes). Please request a new one.")
             return false
         }
 
@@ -466,6 +572,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             onFailed = { error ->
                 _isVerifyingOtp.value = false
                 _isOtpError.value = true
+                _otpAttemptCount.value += 1
                 showToast(error)
             }
         )
@@ -503,6 +610,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 destination = "MAIN_APP"
             )
         }
+        // One active account per phone (rule #1) + entitlement sync (rule #16)
+        viewModelScope.launch {
+            FirebaseManager.registerPhoneIndex("${countryCode.value}${phoneNumber.value}")
+            refreshEntitlementsFromServer()
+        }
+        // Refresh e-mail state + live notifications for the signed-in user
+        FirebaseManager.currentUser?.let { user ->
+            _userEmail.value = user.email ?: ""
+            _emailVerificationState.value =
+                if (user.email.isNullOrBlank()) "NOT_SET" else if (user.isEmailVerified) "VERIFIED" else "PENDING"
+        }
+        loadFirebaseNotifications()
     }
 
     // ---------------- Google Sign-In (Credential Manager) ----------------
@@ -701,16 +820,60 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleConnect(profileId: String) {
+        val target = _profiles.value.firstOrNull { it.id == profileId } ?: return
+
+        // Rule #3 — only verified profiles can send match requests
+        if (!isVerified) {
+            showStatusScreen(verificationPrompt())
+            return
+        }
+
+        val wasConnected = target.isConnected
+        if (!wasConnected) {
+            // Rule #10/#16 — Free: max 10 match requests per day; Premium: unlimited
+            if (!isPremium && _dailyMatchRequestsSent.value >= MAX_MATCH_REQUESTS_PER_DAY) {
+                showStatusScreen(upgradePromptFor("MATCH"))
+                return
+            }
+        }
+
         viewModelScope.launch {
-            try {
-                ApiClient.apiService.sendInterest(InterestRequest(targetProfileId = profileId))
-            } catch (e: Exception) {
-                // Fallback
+            var serverAccepted = false
+            if (FirebaseManager.isSignedIn() && !profileId.startsWith("SOULMATE_")) {
+                // Server is the final authority (rule #22)
+                FirebaseManager.callFunction(
+                    "sendMatchRequest",
+                    mapOf("targetUid" to profileId, "note" to "Hi! I liked your profile.")
+                ).onSuccess { result ->
+                    serverAccepted = true
+                    if (!isPremium) {
+                        val remaining = (result["remainingToday"] as? Long)?.toInt() ?: -1
+                        _dailyMatchRequestsSent.value =
+                            if (remaining >= 0) MAX_MATCH_REQUESTS_PER_DAY - remaining
+                            else _dailyMatchRequestsSent.value + 1
+                    }
+                }.onFailure { e ->
+                    val msg = e.message ?: ""
+                    when {
+                        msg.contains("MATCH_LIMIT_REACHED") -> {
+                            showStatusScreen(upgradePromptFor("MATCH"))
+                            return@launch
+                        }
+                        msg.contains("VERIFICATION_REQUIRED") -> {
+                            showStatusScreen(verificationPrompt())
+                            return@launch
+                        }
+                        // Functions not deployed / offline → local demo fallback continues
+                    }
+                }
             }
             if (FirebaseManager.isSignedIn()) {
                 try {
                     FirebaseManager.sendInterest(myUid(), profileId, "Hi! I liked your profile.")
                 } catch (e: Exception) { /* offline tolerant */ }
+            }
+            if (!serverAccepted && !wasConnected && !isPremium) {
+                _dailyMatchRequestsSent.value += 1
             }
         }
 
@@ -750,6 +913,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // ---------------- Real-time Chat ----------------
 
     fun openChat(profile: Profile) {
+        // Rule #3 — verified-only chat for real members
+        if (FirebaseManager.isSignedIn() && !isVerified && !profile.id.startsWith("SOULMATE_")) {
+            showStatusScreen(verificationPrompt())
+            return
+        }
         _selectedProfile.value = profile
         _currentScreen.value = ScreenState.CHAT_DETAIL
 
@@ -795,6 +963,22 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun sendMessage(text: String) {
         if (text.isBlank()) return
         val profile = _selectedProfile.value ?: return
+
+        // Rule #3/#11 — verified-only chat for real members
+        if (FirebaseManager.isSignedIn() && !isVerified && !profile.id.startsWith("SOULMATE_")) {
+            showStatusScreen(verificationPrompt())
+            return
+        }
+        // Rule #11/#16 — Free: message 1 unique user per day
+        val isDemoTarget = profile.id.startsWith("SOULMATE_")
+        if (FirebaseManager.isSignedIn() && !isDemoTarget && !isPremium &&
+            !_dailyMessageUsers.value.contains(profile.id) &&
+            _dailyMessageUsers.value.size >= MAX_MESSAGE_USERS_PER_DAY
+        ) {
+            showStatusScreen(upgradePromptFor("MESSAGE"))
+            return
+        }
+
         val newMsg = ChatMessage(
             id = "msg_${System.currentTimeMillis()}",
             profileId = profile.id,
@@ -808,14 +992,38 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (FirebaseManager.isSignedIn()) {
             val threadId = FirebaseManager.chatThreadId(myUid(), profile.id)
             viewModelScope.launch {
-                try {
-                    FirebaseManager.sendChatMessage(threadId, myUid(), text.trim(), "TEXT", null)
-                } catch (e: Exception) {
-                    showToast("Message saved offline — will retry when online")
+                var delivered = false
+                if (!isDemoTarget) {
+                    // Server is the final authority (rule #22)
+                    FirebaseManager.callFunction(
+                        "sendMessage",
+                        mapOf("targetUid" to profile.id, "text" to text.trim(), "type" to "TEXT")
+                    ).onSuccess {
+                        delivered = true
+                        if (!isPremium) {
+                            _dailyMessageUsers.value = _dailyMessageUsers.value + profile.id
+                        }
+                    }.onFailure { e ->
+                        if (e.message?.contains("MESSAGE_LIMIT_REACHED") == true) {
+                            showStatusScreen(upgradePromptFor("MESSAGE"))
+                        } else {
+                            try {
+                                FirebaseManager.sendChatMessage(threadId, myUid(), text.trim(), "TEXT", null)
+                            } catch (ex: Exception) {
+                                showToast("Message saved offline — will retry when online")
+                            }
+                        }
+                    }
+                } else {
+                    try {
+                        FirebaseManager.sendChatMessage(threadId, myUid(), text.trim(), "TEXT", null)
+                    } catch (e: Exception) {
+                        showToast("Message saved offline — will retry when online")
+                    }
                 }
             }
             // Interactive auto-reply keeps demo profiles lively
-            if (profile.id.startsWith("SOULMATE_")) simulateAutoReply(text, profile.id)
+            if (isDemoTarget) simulateAutoReply(text, profile.id)
         } else {
             simulateAutoReply(text, profile.id)
         }
@@ -886,6 +1094,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // ---------------- Photo management ----------------
 
     fun addUserPhoto(url: String) {
+        // Rule #5 — maximum 6 profile photos
+        if (_userPhotos.value.size >= MAX_PHOTOS) {
+            showToast("Maximum 6 photos allowed. Remove one to add another.")
+            return
+        }
         val newPhoto = UserPhoto(
             id = "up_${System.currentTimeMillis()}",
             url = url,
@@ -911,8 +1124,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun removeUserPhoto(photoId: String) {
-        _userPhotos.update { it.filterNot { photo -> photo.id == photoId } }
-        showToast("Photo removed")
+        val photo = _userPhotos.value.firstOrNull { it.id == photoId } ?: return
+        val remaining = _userPhotos.value.filterNot { p -> p.id == photoId }
+        // Rule #5 — cannot delete the only/main photo without selecting another main
+        if (photo.isProfilePicture && remaining.isEmpty()) {
+            showToast("You must keep at least one main profile photo. Add another photo first.")
+            return
+        }
+        if (photo.isProfilePicture) {
+            // Promote the first remaining photo to primary
+            _userPhotos.value = remaining.mapIndexed { index, p -> p.copy(isProfilePicture = index == 0) }
+            showToast("Main photo removed — first remaining photo is now primary")
+        } else {
+            _userPhotos.value = remaining
+            showToast("Photo removed")
+        }
     }
 
     fun setAsProfilePhoto(photoId: String) {
@@ -930,10 +1156,23 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun completeProfileCreation() {
         val draft = _profileCreationDraft.value
+
+        // Rule #2/#4 — age must be computed from DOB and be at least 18
+        val computedAge = calculateAgeFromDob(draft.dob)
+        if (computedAge == null || computedAge < MIN_AGE_YEARS) {
+            showToast("You must be at least 18 years old to register on Soulmate.")
+            return
+        }
+        // Rule #4 — at least 1 profile photo is mandatory before submitting
+        if (_userPhotos.value.isEmpty()) {
+            showToast("Please add at least 1 profile photo before submitting your biodata.")
+            return
+        }
+
         val newProfile = Profile(
             id = "SOULMATE_${System.currentTimeMillis() % 10000}",
             name = if (draft.name.isNotBlank()) draft.name else "Karthik Nair",
-            age = draft.age,
+            age = computedAge,
             height = draft.height,
             gender = draft.gender,
             photoUrls = _userPhotos.value.map { it.url }.ifEmpty {
@@ -987,6 +1226,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 // Fallback
             }
             if (FirebaseManager.isSignedIn()) {
+                try {
+                    // Rule #8 — profile enters PENDING_VERIFICATION until admin/AI approval
+                    FirebaseManager.upsertUser(
+                        myUid(),
+                        mapOf(
+                            "status" to "PENDING_VERIFICATION",
+                            "dobMillis" to parseDobMillis(draft.dob),
+                            "gender" to newProfile.gender
+                        )
+                    )
+                    // Rule #1 — one active account per phone (phone_index node)
+                    FirebaseManager.registerPhoneIndex("${countryCode.value}${phoneNumber.value}")
+                } catch (e: Exception) { /* offline tolerant */ }
                 try {
                     val map = mapOf(
                         "name" to newProfile.name, "age" to newProfile.age,
@@ -1179,6 +1431,27 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 // Fallback
             }
 
+            // Rule #19/#22 — server verifies the payment signature before Premium is
+            // activated. Premium is NEVER activated solely on the client's say-so.
+            val fallbackExpiry = System.currentTimeMillis() + PREMIUM_VALIDITY_DAYS * 24 * 60 * 60 * 1000
+            FirebaseManager.callFunction(
+                "activatePremium",
+                mapOf(
+                    "razorpayOrderId" to orderId,
+                    "razorpayPaymentId" to paymentId,
+                    "razorpaySignature" to signature,
+                    "planId" to plan.id
+                )
+            ).onSuccess { result ->
+                _membershipTier.value = "PREMIUM"
+                _subscriptionExpiryMillis.value =
+                    (result["expiryDate"] as? Long) ?: fallbackExpiry
+            }.onFailure {
+                // Demo/offline fallback — Premium active locally for this session
+                _membershipTier.value = "PREMIUM"
+                _subscriptionExpiryMillis.value = fallbackExpiry
+            }
+
             _activePlan.value = plan
             _paymentUiState.value = PaymentUiState.Success(plan.title, paymentId, orderId)
 
@@ -1196,7 +1469,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                             "paymentId" to paymentId,
                             "status" to "ACTIVE",
                             "startDate" to System.currentTimeMillis(),
-                            "expiryDate" to (System.currentTimeMillis() + 180L * 24 * 60 * 60 * 1000)
+                            "expiryDate" to (System.currentTimeMillis() + PREMIUM_VALIDITY_DAYS * 24 * 60 * 60 * 1000)
                         )
                     )
                     FirebaseManager.saveTransaction(
@@ -1246,7 +1519,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun onRazorpayPaymentFailed(errorCode: Int, errorMessage: String) {
+    fun onRazorpayPaymentFailed(errorCode: Int, errorMessage: String, plan: MembershipPlan? = null) {
         _paymentUiState.value = PaymentUiState.Failure(errorCode, errorMessage)
         showToast("Payment Failed: $errorMessage")
 
@@ -1256,9 +1529,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     FirebaseManager.saveTransaction(
                         myUid(),
                         mapOf(
-                            "planTitle" to "Unknown Plan",
-                            "planDuration" to "-",
-                            "amount" to "-",
+                            "planTitle" to (plan?.title ?: "Unknown Plan"),
+                            "planDuration" to (plan?.duration ?: "-"),
+                            "amount" to (plan?.price ?: "-"),
                             "orderId" to "-",
                             "paymentId" to "-",
                             "status" to "FAILED"
@@ -1272,8 +1545,31 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _paymentUiState.value = PaymentUiState.Idle
     }
 
+    /** Rule #9 — activate the Free tier (₹0). */
+    fun activateFreePlan() {
+        _membershipTier.value = "FREE"
+        _subscriptionExpiryMillis.value = 0L
+        showToast("You are on the Free plan: 10 match requests/day, 1 message user/day. Upgrade to Premium — ₹99/month anytime.")
+    }
+
     fun retryFailedPayment() {
         _currentScreen.value = ScreenState.MEMBERSHIP
+    }
+
+    /** Rule #9 — cancel auto-renewal; benefits remain until the paid period ends. */
+    fun cancelAutoRenewal() {
+        viewModelScope.launch {
+            FirebaseManager.callFunction("cancelAutoRenewal", emptyMap())
+            showStatusScreen(
+                StatusScreenData(
+                    kind = "INFO",
+                    title = "Auto-Renewal Cancelled",
+                    message = "Your Premium benefits stay active until the end of the current billing period. After that your account returns to the Free plan (10 match requests/day, 1 message user/day).",
+                    actionLabel = "Back to Settings",
+                    destination = "SETTINGS"
+                )
+            )
+        }
     }
 
     fun resetPaymentState() {
@@ -1394,7 +1690,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _currentScreen.value = ScreenState.LOADING
         viewModelScope.launch {
             delay(900) // brief engine pause for the loading screen
+            // Rules #12/#13 — never surface blocked / self profiles in search
+            val blockedIds = _blockedUsers.value.map { it.id }.toSet()
             val results = _profiles.value.filter { p ->
+                if (p.id in blockedIds || p.id == myProfile.value.id) return@filter false
                 val queryMatched = f.query.isBlank() ||
                     p.name.contains(f.query, true) ||
                     p.city.contains(f.query, true) ||

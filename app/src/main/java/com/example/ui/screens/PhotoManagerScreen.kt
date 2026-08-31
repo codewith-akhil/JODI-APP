@@ -88,23 +88,47 @@ import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.ui.theme.WarmBackground
 import com.example.viewmodel.AppViewModel
+import com.example.viewmodel.ScreenState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PhotoManagerView(
     viewModel: AppViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showBackButton: Boolean = false
 ) {
     val userPhotos by viewModel.userPhotos.collectAsState()
+    val privacySettings by viewModel.privacySettings.collectAsState()
     var showAddPhotoSheet by remember { mutableStateOf(false) }
     var previewPhotoUrl by remember { mutableStateOf<String?>(null) }
-    var isPrivacyEnabled by remember { mutableStateOf(false) }
+    val isPrivacyEnabled = privacySettings.photoVisibility == "Connected Only"
+
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     // Real device gallery picker → Firebase Storage upload
     val galleryPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { pickedUri: Uri? ->
         pickedUri?.let { viewModel.uploadUserPhoto(it) }
+    }
+
+    // Real camera capture via FileProvider (TakePicture needs no CAMERA permission)
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { captured: Boolean ->
+        if (captured) {
+            pendingCameraUri?.let { viewModel.uploadUserPhoto(it) }
+        }
+    }
+    fun launchCamera() {
+        val photoDir = java.io.File(context.cacheDir, "photos").apply { mkdirs() }
+        val photoFile = java.io.File(photoDir, "capture_${System.currentTimeMillis()}.jpg")
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context, "${context.packageName}.fileprovider", photoFile
+        )
+        pendingCameraUri = uri
+        cameraLauncher.launch(uri)
     }
 
     Column(
@@ -120,7 +144,19 @@ fun PhotoManagerView(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (showBackButton) {
+                    androidx.compose.material3.IconButton(
+                        onClick = { viewModel.navigateTo(ScreenState.EDIT_PROFILE) }
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = androidx.compose.material.icons.automirrored.filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = TextPrimary
+                        )
+                    }
+                }
+                Column {
                 Text(
                     text = "Manage Photos (${userPhotos.size}/6)",
                     fontSize = 20.sp,
@@ -134,6 +170,7 @@ fun PhotoManagerView(
                     fontWeight = FontWeight.Medium
                 )
             }
+            } // inner Row (back button + title)
 
             Button(
                 onClick = { showAddPhotoSheet = true },
@@ -192,7 +229,10 @@ fun PhotoManagerView(
                 Switch(
                     checked = isPrivacyEnabled,
                     onCheckedChange = {
-                        isPrivacyEnabled = it
+                        // Persist to the real privacy settings (RTDB-backed)
+                        viewModel.updatePrivacySettings { s ->
+                            s.copy(photoVisibility = if (it) "Connected Only" else "All Users")
+                        }
                         viewModel.showToast(if (it) "Photo Privacy Shield Enabled 🔒" else "Photo Privacy Shield Disabled")
                     },
                     colors = SwitchDefaults.colors(checkedThumbColor = PureWhite, checkedTrackColor = DeepBurgundy)
@@ -282,7 +322,7 @@ fun PhotoManagerView(
                     icon = Icons.Default.CameraAlt,
                     onClick = {
                         showAddPhotoSheet = false
-                        viewModel.addUserPhoto("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80")
+                        launchCamera()
                     }
                 )
 
@@ -302,11 +342,15 @@ fun PhotoManagerView(
 
                 PhotoSourceOption(
                     title = "Import Festival / Traditional Photo",
-                    subtitle = "Add Kerala traditional attire / saree photo",
+                    subtitle = "Pick a traditional attire photo from your gallery",
                     icon = Icons.Default.AddPhotoAlternate,
                     onClick = {
                         showAddPhotoSheet = false
-                        viewModel.addUserPhoto("https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&auto=format&fit=crop&q=80")
+                        galleryPickerLauncher.launch(
+                            androidx.activity.result.PickVisualMediaRequest(
+                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                            )
+                        )
                     }
                 )
             }

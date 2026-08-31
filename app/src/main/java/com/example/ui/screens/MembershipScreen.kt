@@ -67,6 +67,7 @@ import com.example.model.MembershipPlan
 import com.example.payment.PaymentUiState
 import com.example.ui.theme.*
 import com.example.viewmodel.AppViewModel
+import com.example.viewmodel.ScreenState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -447,14 +448,23 @@ fun MembershipScreen(
                         }
                     }
                     else -> {
+                        // Use the orderId created in initiateRazorpayCheckout (PaymentUiState.ReadyForCheckout)
+                        // so the receipt matches the order that was actually initiated.
+                        val checkout = paymentUiState as? PaymentUiState.ReadyForCheckout
                         Button(
                             onClick = {
+                                if (plan.id == "plan_free") {
+                                    // Rule #9 — the Free plan requires no payment
+                                    selectedPlanForPayment = null
+                                    viewModel.activateFreePlan()
+                                    return@Button
+                                }
                                 val generatedPaymentId = "pay_rzp_${System.currentTimeMillis() % 100000}"
-                                val generatedOrderId = "order_rzp_${System.currentTimeMillis() % 100000}"
                                 val signature = "sig_${System.currentTimeMillis()}"
                                 viewModel.onRazorpayPaymentSuccess(
                                     paymentId = generatedPaymentId,
-                                    orderId = generatedOrderId,
+                                    orderId = checkout?.orderId
+                                        ?: "order_rzp_${System.currentTimeMillis() % 100000}",
                                     signature = signature,
                                     plan = plan
                                 )
@@ -473,7 +483,7 @@ fun MembershipScreen(
                             Icon(imageVector = Icons.Default.Lock, contentDescription = "Lock", modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Pay ${plan.price} via Razorpay",
+                                text = if (plan.id == "plan_free") "Continue with Free Plan — ₹0/month" else "Pay ${plan.price} via Razorpay",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -483,9 +493,11 @@ fun MembershipScreen(
 
                         TextButton(
                             onClick = {
+                                // User-cancelled checkout is NOT a payment failure:
+                                // no FAILED receipt is recorded, we simply close the sheet.
                                 selectedPlanForPayment = null
                                 viewModel.resetPaymentState()
-                                viewModel.onRazorpayPaymentFailed(-1, "Payment cancelled by user")
+                                viewModel.showToast("Payment cancelled — no amount was charged.")
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {

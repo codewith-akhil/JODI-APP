@@ -57,6 +57,7 @@ import coil.compose.AsyncImage
 import com.example.model.Profile
 import com.example.ui.theme.*
 import com.example.viewmodel.AppViewModel
+import com.example.viewmodel.ScreenState
 
 /**
  * Advanced Search & Filter page — the deep criteria search promised by the

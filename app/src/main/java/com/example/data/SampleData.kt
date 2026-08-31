@@ -283,57 +283,46 @@ object SampleData {
         )
     )
 
+    // Exactly TWO membership plans (business rule #9):
+    // FREE  -> ₹0 / month  (10 match requests/day, 1 message user/day)
+    // PREMIUM -> ₹99 / month, valid 30 days (unlimited matching & messaging)
     val membershipPlans = listOf(
         MembershipPlan(
-            id = "plan_silver",
-            title = "Silver Essential",
-            duration = "3 Months",
-            price = "₹ 99",
-            originalPrice = "₹ 299",
-            discountPercent = "67% OFF",
+            id = "plan_free",
+            title = "Free",
+            duration = "1 Month",
+            price = "₹ 0",
+            originalPrice = "₹ 0",
+            discountPercent = "",
             isPopular = false,
             features = listOf(
-                "View up to 25 Verified Contact Numbers",
-                "Send Unlimited Connection Requests",
-                "Direct Real-Time Chat with Matches",
-                "Horoscope Porutham & Compatibility Score"
+                "Create & complete your profile",
+                "Upload up to 6 profile photos",
+                "Browse and search verified profiles",
+                "Apply all available search filters",
+                "Receive match requests & messages",
+                "Send up to 10 match requests per day",
+                "Message up to 1 new user per day"
             ),
             bgGradientColor = 0xFF5C6BC0
         ),
         MembershipPlan(
-            id = "plan_gold",
-            title = "Gold Matchmaker",
-            duration = "6 Months",
-            price = "₹ 199",
-            originalPrice = "₹ 599",
+            id = "plan_premium_99",
+            title = "Premium",
+            duration = "1 Month (30 days)",
+            price = "₹ 99",
+            originalPrice = "₹ 299",
             discountPercent = "67% OFF",
             isPopular = true,
             features = listOf(
-                "View up to 75 Verified Contact Numbers",
-                "Direct WhatsApp Integration & Biodata PDF Download",
-                "Complete 10-Point Jathakam & 36 Guna Report",
-                "3x Higher Profile Visibility in Discovery",
-                "Dedicated Relationship Manager Assistance"
+                "Unlimited match requests",
+                "Unlimited messaging & chat",
+                "No daily limits at all",
+                "Verified-user matching and chat",
+                "Full search & filter functionality",
+                "Priority support & profile visibility"
             ),
             bgGradientColor = 0xFFD81B60
-        ),
-        MembershipPlan(
-            id = "plan_platinum",
-            title = "Platinum Royal Plan",
-            duration = "12 Months / Till Marriage",
-            price = "₹ 599",
-            originalPrice = "₹ 1,999",
-            discountPercent = "70% OFF",
-            isPopular = false,
-            features = listOf(
-                "Unlimited Verified Contact Numbers & Biodatas",
-                "Instant Match Alerts via WhatsApp & SMS",
-                "Full Astro Consultation with Vedic Astrologer",
-                "Top Ranked Featured Profile across all feeds",
-                "Personalized Matchmaker Curated Profiles Weekly",
-                "100% Privacy Control & Photo Watermarking"
-            ),
-            bgGradientColor = 0xFF8E24AA
         )
     )
 

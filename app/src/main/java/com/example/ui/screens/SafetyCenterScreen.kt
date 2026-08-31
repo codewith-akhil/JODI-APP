@@ -59,6 +59,7 @@ import coil.compose.AsyncImage
 import com.example.model.Profile
 import com.example.ui.theme.*
 import com.example.viewmodel.AppViewModel
+import com.example.viewmodel.ScreenState
 
 /**
  * Safety Center — safety guidelines, report-a-profile flow and
@@ -74,6 +75,11 @@ fun SafetyCenterScreen(
 
     var reportTarget by remember { mutableStateOf<Profile?>(null) }
     var blockTarget by remember { mutableStateOf<Profile?>(null) }
+
+    // Sync the blocked list from Firebase when the screen opens
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        viewModel.loadBlockedUsers()
+    }
 
     Column(
         modifier = modifier
@@ -472,11 +478,13 @@ private fun ReportProfileDialog(
 
     val reasons = listOf(
         "Fake profile",
-        "Inappropriate photos",
-        "Harassment / abuse",
-        "Asking for money",
-        "Spam or scam links",
-        "Already married"
+        "Spam",
+        "Harassment",
+        "Inappropriate content",
+        "Fraud / scam",
+        "Offensive behavior",
+        "Impersonation",
+        "Other"
     )
 
     AlertDialog(

@@ -68,6 +68,7 @@ object FirebaseManager {
     const val STORAGE_PHOTOS_PATH = "profile_photos"
     const val STORAGE_GOVT_IDS_PATH = "govt_id_proofs"
     const val STORAGE_CHAT_MEDIA_PATH = "chat_media"
+    const val STORAGE_HOROSCOPE_PATH = "horoscope_docs"
 
     private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
     private val database: FirebaseDatabase by lazy {
@@ -497,6 +498,48 @@ object FirebaseManager {
 
     suspend fun uploadChatMedia(threadId: String, imageUri: Uri): Result<String> =
         uploadImage(imageUri, "$STORAGE_CHAT_MEDIA_PATH/$threadId/${System.currentTimeMillis()}.jpg")
+
+    // ---------------- Server-authoritative backend (Cloud Functions) ----------------
+    // All restricted mutations (match requests, messages, premium activation)
+    // flow through callables — the backend is the final authority (rule #22).
+
+    suspend fun callFunction(name: String, params: Map<String, Any?>): Result<Map<String, Any?>> = try {
+        val result = com.google.firebase.functions.FirebaseFunctions.getInstance()
+            .getHttpsCallable(name).call(params).await()
+        @Suppress("UNCHECKED_CAST")
+        Result.success((result.data as? Map<String, Any?>) ?: emptyMap())
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    /** One active account per phone (rule #1) — enforced again by rules. */
+    suspend fun registerPhoneIndex(phone: String) {
+        val uid = auth.currentUser?.uid ?: return
+        val key = phone.replace(Regex("[.#$/\\[\\]]"), "_")
+        try {
+            database.getReference("phone_index").child(key).setValue(uid).await()
+        } catch (_: Exception) { /* non-fatal */ }
+    }
+
+    suspend fun fetchMembership(uid: String): Map<String, Any?>? =
+        try {
+            database.getReference(NODE_USERS).child(uid).child("membership").get().await().value as? Map<String, Any?>
+        } catch (_: Exception) { null }
+
+    suspend fun fetchDailyCounters(uid: String, day: String): Map<String, Any?>? =
+        try {
+            database.getReference(NODE_USERS).child(uid).child("counters").child(day).get().await().value as? Map<String, Any?>
+        } catch (_: Exception) { null }
+
+    /** Horoscope upload (rule #6) — optional, private, size-limited by storage rules. */
+    suspend fun uploadHoroscopeDocument(uid: String, fileUri: Uri): Result<String> =
+        uploadImage(fileUri, "$STORAGE_HOROSCOPE_PATH/$uid/${System.currentTimeMillis()}.pdf")
+
+    /** Verification documents (rule #7) — never public, stored under verification_docs (read: false). */
+    suspend fun saveVerificationDocMeta(uid: String, map: Map<String, Any>) {
+        val ref = database.getReference("verification_docs").child(uid).push()
+        ref.setValue(map + mapOf("id" to ref.key, "createdAt" to System.currentTimeMillis())).await()
+    }
 
     // ---------------- Account data erasure ----------------
 

@@ -48,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -72,7 +73,7 @@ fun AccountVerificationScreen(
     val isPerforming by viewModel.isPerformingAccountAction.collectAsState()
 
     val context = LocalContext.current
-    var secondsLeft by remember { mutableIntStateOf(45) }
+    var secondsLeft by remember { mutableIntStateOf(60) }  // Rule #1: 60s resend cooldown
     var otpSent by remember { mutableStateOf(false) }
 
     val isDelete = action == PendingAccountAction.DELETE
@@ -286,6 +287,65 @@ fun AccountVerificationScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
+            // Numeric keypad (same pattern as the login OTP screen) —
+            // feeds viewModel.setAccountOtpCode so the code can be typed.
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val keyRows = listOf(
+                    listOf("1", "2", "3"),
+                    listOf("4", "5", "6"),
+                    listOf("7", "8", "9"),
+                    listOf("C", "0", "⌫")
+                )
+
+                for (row in keyRows) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        for (key in row) {
+                            Surface(
+                                onClick = {
+                                    when (key) {
+                                        "C" -> viewModel.setAccountOtpCode("")
+                                        "⌫" -> {
+                                            if (otpCode.isNotEmpty()) {
+                                                viewModel.setAccountOtpCode(otpCode.dropLast(1))
+                                            }
+                                        }
+                                        else -> {
+                                            if (otpCode.length < 6) {
+                                                viewModel.setAccountOtpCode(otpCode + key)
+                                            }
+                                        }
+                                    }
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                color = PureWhite,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp)
+                                    .testTag("account_keypad_$key")
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = key,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
             // Resend
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -293,13 +353,13 @@ fun AccountVerificationScreen(
             ) {
                 if (secondsLeft > 0) {
                     Text(
-                        text = "Resend OTP in 00:${if (secondsLeft < 10) "0$secondsLeft" else secondsLeft}",
+                        text = "Resend OTP in ${secondsLeft}s",
                         fontSize = 12.sp,
                         color = TextSecondary
                     )
                 } else {
                     TextButton(onClick = {
-                        secondsLeft = 45
+                        secondsLeft = 60
                         (context as? Activity)?.let { viewModel.sendAccountActionOtp(it) }
                     }) {
                         Text("Resend OTP", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = accent)

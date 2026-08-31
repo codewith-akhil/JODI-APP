@@ -58,7 +58,7 @@ object RazorpayPaymentService {
             put("prefill", prefill)
 
             val theme = JSONObject().apply {
-                put("color", "#6A1B29") // Deep Burgundy Brand Primary
+                put("color", "#0284C7") // Soulmate Brand Primary Blue
                 put("backdrop_color", "#1C1B1F")
             }
             put("theme", theme)

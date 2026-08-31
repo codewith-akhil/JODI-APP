@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import com.example.model.TransactionRecord
 import com.example.ui.theme.*
 import com.example.viewmodel.AppViewModel
+import com.example.viewmodel.ScreenState
 
 /**
  * Subscription management & payment history — invoices/receipts per
@@ -286,7 +287,7 @@ fun PaymentHistoryScreen(
                 Button(
                     onClick = {
                         showCancelDialog = false
-                        viewModel.showToast("Auto-renewal cancelled. Benefits active until period end.")
+                        viewModel.cancelAutoRenewal()
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = DarkGold, contentColor = PureWhite

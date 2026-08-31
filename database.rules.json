@@ -1,0 +1,157 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "app_config": {
+      ".read": true,
+      ".write": false
+    },
+
+    "phone_index": {
+      "$phone": {
+        ".read": "auth != null",
+        ".write": "auth != null && !data.exists() && newData.exists() && newData.val() === auth.uid"
+      }
+    },
+
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['uid'])",
+        "uid":          { ".validate": "newData.val() === $uid" },
+        "phone":        { ".validate": "newData.isString() && newData.val().length >= 10" },
+        "dobMillis":    { ".validate": "!newData.exists() || (newData.isNumber() && newData.val() <= now - 567648000000)" },
+        "status": {
+          ".validate": "!data.exists() || (data.val() !== 'BANNED' && data.val() !== 'SUSPENDED' && data.val() !== 'REJECTED') || newData.val() === data.val()"
+        },
+        "membership": {
+          "tier":       { ".write": false, ".validate": true },
+          "expiryDate": { ".write": false, ".validate": true },
+          "autoRenew":  { ".validate": "newData.isBoolean()" }
+        },
+        "counters":     { ".write": false, ".validate": true },
+        "verification": {
+          "status": { ".write": false, ".validate": true },
+          ".read": "auth != null"
+        }
+      }
+    },
+
+    "profiles": {
+      "$uid": {
+        ".read": "auth != null && (root.child('users').child($uid).child('status').val() === 'ACTIVE' || auth.uid === $uid)",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['name'])",
+        "name":   { ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 60" },
+        "bio":    { ".validate": "newData.isString() && newData.val().length <= 1500" },
+        "photoUrls": { ".validate": "newData.hasChildren() && newData.val().length <= 6" }
+      }
+    },
+
+    "privacy_settings": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+
+    "notifications": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null"
+      }
+    },
+
+    "match_requests": {
+      "$reqId": {
+        ".read": "auth != null && (data.child('fromUid').val() === auth.uid || data.child('toUid').val() === auth.uid)",
+        ".write": false,
+        ".validate": "newData.hasChildren(['fromUid','toUid','status','createdAt'])",
+        "status": { ".validate": "newData.val() === 'PENDING' || newData.val() === 'ACCEPTED' || newData.val() === 'REJECTED' || newData.val() === 'CANCELLED' || newData.val() === 'BLOCKED'" }
+      }
+    },
+
+    "chats": {
+      "$threadId": {
+        ".read": "auth != null && root.child('chats').child($threadId).child('members').child(auth.uid).val() === true",
+        ".write": "false",
+        "members": {
+          "$uid": { ".validate": "newData.isBoolean()" }
+        },
+        "messages": {
+          "$msgId": {
+            ".validate": "newData.hasChildren(['id','senderId','text','type','timestamp'])"
+          }
+        }
+      }
+    },
+
+    "subscriptions": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "$subId": { ".validate": "newData.hasChildren(['planId','status'])" }
+      }
+    },
+
+    "transactions": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "$txnId": { ".validate": "newData.hasChildren(['status'])" }
+      }
+    },
+
+    "verifications": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+
+    "verification_docs": {
+      "$uid": {
+        ".read": "false",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+
+    "interests": {
+      ".read": false,
+      ".write": false
+    },
+
+    "reports": {
+      ".read": false,
+      "$reportId": {
+        ".write": "auth != null && !data.exists() && newData.exists()",
+        ".validate": "newData.hasChildren(['reporterUid','reportedUid','category','createdAt']) && newData.child('reporterUid').val() === auth.uid",
+        "category": {
+          ".validate": "newData.val() === 'FAKE_PROFILE' || newData.val() === 'SPAM' || newData.val() === 'HARASSMENT' || newData.val() === 'INAPPROPRIATE_CONTENT' || newData.val() === 'FRAUD_SCAM' || newData.val() === 'OFFENSIVE_BEHAVIOR' || newData.val() === 'IMPERSONATION' || newData.val() === 'OTHER'"
+        }
+      }
+    },
+
+    "blocks": {
+      "$pairId": {
+        ".read": "auth != null && $pairId.split('_')[0] === auth.uid",
+        ".write": "auth != null && !data.exists() && newData.exists() && newData.child('blockerUid').val() === auth.uid"
+      }
+    },
+
+    "support_tickets": {
+      ".read": false,
+      "$ticketId": {
+        ".write": "auth != null && !data.exists() && newData.exists()",
+        ".validate": "newData.hasChildren(['subject','message','status'])"
+      }
+    },
+
+    "success_stories": {
+      ".read": true,
+      ".write": false
+    }
+  }
+}

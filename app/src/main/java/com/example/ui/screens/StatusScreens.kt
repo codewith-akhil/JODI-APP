@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.sp
 import com.example.model.MembershipPlan
 import com.example.ui.theme.*
 import com.example.viewmodel.AppViewModel
+import com.example.viewmodel.ScreenState
 import com.example.viewmodel.BottomTab
 import kotlinx.coroutines.delay
 
@@ -902,8 +903,48 @@ fun SubscribedScreen(
     modifier: Modifier = Modifier
 ) {
     val activePlan by viewModel.activePlan.collectAsState()
-    val plan: MembershipPlan = activePlan ?: viewModel.membershipPlans.value.firstOrNull { it.isPopular }
-    ?: viewModel.membershipPlans.value.first()
+    val plans by viewModel.membershipPlans.collectAsState()
+    val plan: MembershipPlan? = activePlan
+        ?: plans.firstOrNull { it.isPopular }
+        ?: plans.firstOrNull()
+
+    // Defensive empty state — never crash if the plan list is unavailable
+    if (plan == null) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(WarmBackground)
+                .statusBarsPadding()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.WorkspacePremium,
+                contentDescription = null,
+                tint = DarkGold,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "No active membership found",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = { viewModel.navigateTo(ScreenState.MEMBERSHIP) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PrimaryBlue, contentColor = PureWhite
+                ),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Text("Browse Membership Plans", fontWeight = FontWeight.Bold)
+            }
+        }
+        return
+    }
 
     Column(
         modifier = modifier

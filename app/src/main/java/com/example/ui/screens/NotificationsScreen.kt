@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import com.example.model.AppNotification
 import com.example.ui.theme.*
 import com.example.viewmodel.AppViewModel
+import com.example.viewmodel.ScreenState
 
 /** Notification Center — interests, messages, visitors, matches, system & payment alerts. */
 @Composable

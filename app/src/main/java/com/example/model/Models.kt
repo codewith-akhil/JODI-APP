@@ -147,7 +147,8 @@ data class AppNotification(
     val body: String,
     val timeAgo: String,
     val isRead: Boolean = false,
-    val profileId: String? = null
+    val profileId: String? = null,
+    val requestId: String? = null  // match-request id — enables Accept/Decline on INTEREST rows
 )
 
 /** Payment history / transaction receipt */

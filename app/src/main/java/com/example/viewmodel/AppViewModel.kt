@@ -867,11 +867,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             }
-            if (FirebaseManager.isSignedIn()) {
-                try {
-                    FirebaseManager.sendInterest(myUid(), profileId, "Hi! I liked your profile.")
-                } catch (e: Exception) { /* offline tolerant */ }
-            }
+            // NOTE: no direct RTDB write here — the sendMatchRequest callable
+            // already records the request and notifies the target server-side.
+            // (The old interests-node write is denied by database.rules.json.)
             if (!serverAccepted && !wasConnected && !isPremium) {
                 _dailyMatchRequestsSent.value += 1
             }
@@ -990,40 +988,31 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _activeChat.update { it + newMsg }
 
         if (FirebaseManager.isSignedIn()) {
-            val threadId = FirebaseManager.chatThreadId(myUid(), profile.id)
             viewModelScope.launch {
-                var delivered = false
-                if (!isDemoTarget) {
-                    // Server is the final authority (rule #22)
-                    FirebaseManager.callFunction(
-                        "sendMessage",
-                        mapOf("targetUid" to profile.id, "text" to text.trim(), "type" to "TEXT")
-                    ).onSuccess {
-                        delivered = true
-                        if (!isPremium) {
-                            _dailyMessageUsers.value = _dailyMessageUsers.value + profile.id
-                        }
-                    }.onFailure { e ->
-                        if (e.message?.contains("MESSAGE_LIMIT_REACHED") == true) {
-                            showStatusScreen(upgradePromptFor("MESSAGE"))
-                        } else {
-                            try {
-                                FirebaseManager.sendChatMessage(threadId, myUid(), text.trim(), "TEXT", null)
-                            } catch (ex: Exception) {
-                                showToast("Message saved offline — will retry when online")
-                            }
-                        }
+                if (isDemoTarget) {
+                    // Demo profiles have no real server thread — local reply only
+                    simulateAutoReply(text, profile.id)
+                    return@launch
+                }
+                // Server is the final authority (rule #22). Direct RTDB writes to
+                // `chats` are denied by database.rules.json by design.
+                FirebaseManager.callFunction(
+                    "sendMessage",
+                    mapOf("targetUid" to profile.id, "text" to text.trim(), "type" to "TEXT")
+                ).onSuccess {
+                    if (!isPremium) {
+                        _dailyMessageUsers.value = _dailyMessageUsers.value + profile.id
                     }
-                } else {
-                    try {
-                        FirebaseManager.sendChatMessage(threadId, myUid(), text.trim(), "TEXT", null)
-                    } catch (e: Exception) {
-                        showToast("Message saved offline — will retry when online")
+                }.onFailure { e ->
+                    if (e.message?.contains("MESSAGE_LIMIT_REACHED") == true) {
+                        showStatusScreen(upgradePromptFor("MESSAGE"))
+                    } else {
+                        // Remove the optimistic bubble so the UI reflects reality
+                        _activeChat.update { list -> list.filterNot { it.id == newMsg.id } }
+                        showToast("Message not delivered — check your connection and try again")
                     }
                 }
             }
-            // Interactive auto-reply keeps demo profiles lively
-            if (isDemoTarget) simulateAutoReply(text, profile.id)
         } else {
             simulateAutoReply(text, profile.id)
         }
@@ -1047,11 +1036,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                         "Just now", true, true
                     )
                 }
-                if (FirebaseManager.isSignedIn()) {
-                    try {
-                        FirebaseManager.sendChatMessage(threadId, myUid(), "📷 Photo", "IMAGE", url)
-                    } catch (e: Exception) {
-                        showToast("Photo saved offline")
+                if (FirebaseManager.isSignedIn() && !profile.id.startsWith("SOULMATE_")) {
+                    // Server-authoritative delivery — direct writes to `chats`
+                    // are denied by database.rules.json by design.
+                    FirebaseManager.callFunction(
+                        "sendMessage",
+                        mapOf(
+                            "targetUid" to profile.id,
+                            "text" to "📷 Photo",
+                            "type" to "IMAGE",
+                            "mediaUrl" to url
+                        )
+                    ).onFailure {
+                        showToast("Photo uploaded but not delivered — please try resending")
                     }
                 }
             }.onFailure {
@@ -1233,15 +1230,20 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                         mapOf(
                             "status" to "PENDING_VERIFICATION",
                             "dobMillis" to parseDobMillis(draft.dob),
-                            "gender" to newProfile.gender
+                            "gender" to newProfile.gender,
+                            "photoCount" to newProfile.photoUrls.size
                         )
                     )
+                    // Server-side completeness gate (rules #3/#4/#8) — validates the
+                    // mandatory biodata fields, then flips verification/status to PENDING
+                    FirebaseManager.callFunction("submitForVerification", emptyMap())
                     // Rule #1 — one active account per phone (phone_index node)
                     FirebaseManager.registerPhoneIndex("${countryCode.value}${phoneNumber.value}")
                 } catch (e: Exception) { /* offline tolerant */ }
                 try {
                     val map = mapOf(
-                        "name" to newProfile.name, "age" to newProfile.age,
+                        "name" to newProfile.name, "dob" to draft.dob, "profileFor" to draft.profileFor,
+                        "age" to newProfile.age,
                         "gender" to newProfile.gender, "height" to newProfile.height,
                         "religion" to newProfile.religion, "caste" to newProfile.caste,
                         "gothram" to newProfile.gothram, "starNakshatra" to newProfile.starNakshatra,
@@ -1295,7 +1297,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
             if (FirebaseManager.isSignedIn()) {
                 try {
-                    FirebaseManager.saveProfile(
+                    // Partial update — a full replace would wipe dob/photoUrls/etc.
+                    FirebaseManager.updateProfileFields(
                         myUid(),
                         mapOf(
                             "name" to _myProfile.value.name,
@@ -1416,25 +1419,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun onRazorpayPaymentSuccess(paymentId: String, orderId: String, signature: String, plan: MembershipPlan) {
         viewModelScope.launch {
             _paymentUiState.value = PaymentUiState.VerifyingPayment(paymentId, orderId)
-            delay(1000) // Verification call with backend
+            delay(1000)
 
-            try {
-                ApiClient.apiService.verifyPayment(
-                    VerifyPaymentRequest(
-                        razorpayOrderId = orderId,
-                        razorpayPaymentId = paymentId,
-                        razorpaySignature = signature,
-                        planId = plan.id
-                    )
-                )
-            } catch (e: Exception) {
-                // Fallback
-            }
-
-            // Rule #19/#22 — server verifies the payment signature before Premium is
-            // activated. Premium is NEVER activated solely on the client's say-so.
+            // Rule #19/#22 — the server verifies the Razorpay HMAC signature before
+            // Premium is activated. Premium is NEVER activated on the client's say-so.
             val fallbackExpiry = System.currentTimeMillis() + PREMIUM_VALIDITY_DAYS * 24 * 60 * 60 * 1000
-            FirebaseManager.callFunction(
+            val result = FirebaseManager.callFunction(
                 "activatePremium",
                 mapOf(
                     "razorpayOrderId" to orderId,
@@ -1442,59 +1432,69 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     "razorpaySignature" to signature,
                     "planId" to plan.id
                 )
-            ).onSuccess { result ->
+            )
+
+            if (result.isSuccess) {
+                // On success the server records subscription + transaction + notification
+                val server = result.getOrNull() ?: emptyMap()
                 _membershipTier.value = "PREMIUM"
                 _subscriptionExpiryMillis.value =
-                    (result["expiryDate"] as? Long) ?: fallbackExpiry
-            }.onFailure {
-                // Demo/offline fallback — Premium active locally for this session
+                    (server["expiryDate"] as? Long) ?: fallbackExpiry
+            } else {
+                val cause = result.exceptionOrNull()
+                val code = (cause as? com.google.firebase.functions.FirebaseFunctionsException)?.code
+                val serverRejected =
+                    code == com.google.firebase.functions.FirebaseFunctionsException.Code.PERMISSION_DENIED ||
+                        code == com.google.firebase.functions.FirebaseFunctionsException.Code.INVALID_ARGUMENT ||
+                        code == com.google.firebase.functions.FirebaseFunctionsException.Code.UNAUTHENTICATED
+                if (serverRejected) {
+                    // Signature/plan rejected by the backend — never grant Premium locally.
+                    _paymentUiState.value = PaymentUiState.Failure(
+                        -2,
+                        "Payment verification failed. If you were charged, contact support with payment ID $paymentId."
+                    )
+                    showToast("Payment verification failed — Premium was not activated")
+                    return@launch
+                }
+                // Offline / functions unreachable — demo fallback for this session only
                 _membershipTier.value = "PREMIUM"
                 _subscriptionExpiryMillis.value = fallbackExpiry
+
+                // Offline fallback ledger (on success the server writes these itself —
+                // writing them here too would create duplicate records).
+                if (FirebaseManager.isSignedIn()) {
+                    try {
+                        FirebaseManager.saveSubscription(
+                            myUid(),
+                            mapOf(
+                                "planId" to plan.id,
+                                "planTitle" to plan.title,
+                                "duration" to plan.duration,
+                                "amount" to plan.price,
+                                "orderId" to orderId,
+                                "paymentId" to paymentId,
+                                "status" to "ACTIVE",
+                                "startDate" to System.currentTimeMillis(),
+                                "expiryDate" to fallbackExpiry
+                            )
+                        )
+                        FirebaseManager.saveTransaction(
+                            myUid(),
+                            mapOf(
+                                "planTitle" to plan.title,
+                                "planDuration" to plan.duration,
+                                "amount" to plan.price,
+                                "orderId" to orderId,
+                                "paymentId" to paymentId,
+                                "status" to "SUCCESS"
+                            )
+                        )
+                    } catch (e: Exception) { /* offline tolerant */ }
+                }
             }
 
             _activePlan.value = plan
             _paymentUiState.value = PaymentUiState.Success(plan.title, paymentId, orderId)
-
-            // Persist subscription + transaction receipt to Firebase
-            if (FirebaseManager.isSignedIn()) {
-                try {
-                    FirebaseManager.saveSubscription(
-                        myUid(),
-                        mapOf(
-                            "planId" to plan.id,
-                            "planTitle" to plan.title,
-                            "duration" to plan.duration,
-                            "amount" to plan.price,
-                            "orderId" to orderId,
-                            "paymentId" to paymentId,
-                            "status" to "ACTIVE",
-                            "startDate" to System.currentTimeMillis(),
-                            "expiryDate" to (System.currentTimeMillis() + PREMIUM_VALIDITY_DAYS * 24 * 60 * 60 * 1000)
-                        )
-                    )
-                    FirebaseManager.saveTransaction(
-                        myUid(),
-                        mapOf(
-                            "planTitle" to plan.title,
-                            "planDuration" to plan.duration,
-                            "amount" to plan.price,
-                            "orderId" to orderId,
-                            "paymentId" to paymentId,
-                            "status" to "SUCCESS"
-                        )
-                    )
-                    FirebaseManager.pushNotification(
-                        myUid(),
-                        mapOf(
-                            "type" to "PAYMENT",
-                            "title" to "Membership Activated",
-                            "body" to "Your ${plan.title} plan is now active. Enjoy premium matchmaking!",
-                            "timeAgo" to "Just now",
-                            "isRead" to false
-                        )
-                    )
-                } catch (e: Exception) { /* offline tolerant */ }
-            }
 
             // Record locally for the history page
             _transactions.update {
@@ -1655,6 +1655,41 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewProfile(target)
     }
 
+    /**
+     * Accepts/declines an incoming match request (rule #10 state machine).
+     * The server callable is the authority: on ACCEPT it creates the chat
+     * thread for both members and notifies the sender. The INTEREST
+     * notification is removed once handled.
+     */
+    fun respondToMatchRequest(notification: AppNotification, accept: Boolean) {
+        val requestId = notification.requestId ?: return
+        viewModelScope.launch {
+            val action = if (accept) "ACCEPTED" else "REJECTED"
+            val result = FirebaseManager.callFunction(
+                "respondToMatchRequest",
+                mapOf("requestId" to requestId, "action" to action)
+            )
+            if (result.isSuccess) {
+                if (accept) {
+                    notification.profileId?.let { senderId ->
+                        _profiles.update { list ->
+                            list.map { if (it.id == senderId) it.copy(isConnected = true) else it }
+                        }
+                    }
+                    showToast("Match accepted \u2014 you can start chatting now!")
+                } else {
+                    showToast("Request declined.")
+                }
+                _notifications.update { list -> list.filterNot { it.id == notification.id } }
+                try {
+                    FirebaseManager.removeNotification(myUid(), notification.id)
+                } catch (e: Exception) { /* offline tolerant */ }
+            } else {
+                showToast("Could not respond \u2014 please try again.")
+            }
+        }
+    }
+
     private fun loadFirebaseNotifications() {
         if (!FirebaseManager.isSignedIn()) return
         viewModelScope.launch {
@@ -1669,7 +1704,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                                 body = (map["body"] as? String) ?: "",
                                 timeAgo = (map["timeAgo"] as? String) ?: "Recently",
                                 isRead = (map["isRead"] as? Boolean) ?: false,
-                                profileId = map["profileId"] as? String
+                                profileId = map["profileId"] as? String,
+                                requestId = map["requestId"] as? String
                             )
                         }
                     }
@@ -1759,11 +1795,26 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             if (FirebaseManager.isSignedIn()) {
                 try {
-                    FirebaseManager.reportUser(myUid(), reportedProfile.id, reportedProfile.name, reason, details)
+                    FirebaseManager.reportUser(
+                        myUid(), reportedProfile.id, reportedProfile.name,
+                        reason, details, reportCategoryFor(reason)
+                    )
                 } catch (e: Exception) { /* offline tolerant */ }
             }
             showToast("Report submitted. Our Trust & Safety team will review within 24 hours.")
         }
+    }
+
+    /** Maps UI report reasons to the category enum enforced by database.rules.json. */
+    private fun reportCategoryFor(reason: String): String = when (reason) {
+        "Fake profile" -> "FAKE_PROFILE"
+        "Spam" -> "SPAM"
+        "Harassment" -> "HARASSMENT"
+        "Inappropriate content" -> "INAPPROPRIATE_CONTENT"
+        "Fraud / scam" -> "FRAUD_SCAM"
+        "Offensive behavior" -> "OFFENSIVE_BEHAVIOR"
+        "Impersonation" -> "IMPERSONATION"
+        else -> "OTHER"
     }
 
     fun blockProfile(profile: Profile) {

@@ -1,10 +1,12 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,10 +32,13 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -120,9 +125,12 @@ fun NotificationsScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             items(notifications, key = { it.id }) { notification ->
+                val isMatchRequest = notification.type == "INTEREST" && notification.requestId != null
                 NotificationCard(
                     notification = notification,
-                    onClick = { viewModel.openNotificationProfile(notification.profileId) }
+                    onClick = { viewModel.openNotificationProfile(notification.profileId) },
+                    onAccept = if (isMatchRequest) { { viewModel.respondToMatchRequest(notification, true) } } else null,
+                    onDecline = if (isMatchRequest) { { viewModel.respondToMatchRequest(notification, false) } } else null
                 )
             }
 
@@ -162,7 +170,9 @@ fun NotificationsScreen(
 @Composable
 private fun NotificationCard(
     notification: AppNotification,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onAccept: (() -> Unit)? = null,
+    onDecline: (() -> Unit)? = null
 ) {
     val (icon, tint, container) = when (notification.type) {
         "INTEREST" -> Triple(Icons.Default.Favorite, PrimaryEmerald, LightGreen)
@@ -235,6 +245,31 @@ private fun NotificationCard(
                     color = TextMuted,
                     fontWeight = FontWeight.Medium
                 )
+                if (onAccept != null && onDecline != null) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = onAccept,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = PrimaryEmerald,
+                                contentColor = PureWhite
+                            ),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                        ) {
+                            Text("Accept", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                        OutlinedButton(
+                            onClick = onDecline,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = CrimsonRed),
+                            border = BorderStroke(1.dp, CrimsonRed.copy(alpha = 0.4f)),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                        ) {
+                            Text("Decline", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
         }
     }

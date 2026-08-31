@@ -258,6 +258,21 @@ object FirebaseManager {
 
     suspend fun saveProfile(uid: String, map: Map<String, Any>) {
         database.getReference(NODE_PROFILES).child(uid).setValue(map).await()
+        // Keep the server-side photo counter in sync (submitForVerification
+        // requires users/$uid/photoCount >= 1 before accepting a submission).
+        val photos = map["photoUrls"]
+        if (photos is List<*>) {
+            database.getReference(NODE_USERS).child(uid).child("photoCount").setValue(photos.size).await()
+        }
+    }
+
+    /**
+     * Partial profile update — merges only the given fields. Never use
+     * [saveProfile] (full replace) for edits, it would wipe fields absent
+     * from the map (dob, photoUrls, ...) and trip the RTDB validators.
+     */
+    suspend fun updateProfileFields(uid: String, map: Map<String, Any>) {
+        database.getReference(NODE_PROFILES).child(uid).updateChildren(map).await()
     }
 
     suspend fun fetchProfile(uid: String): Map<String, Any?>? {
@@ -307,20 +322,9 @@ object FirebaseManager {
         }
     }
 
-    // ---------------- Interests ----------------
-
-    suspend fun sendInterest(fromUid: String, toUid: String, note: String) {
-        val ref = database.getReference(NODE_INTERESTS).push()
-        ref.setValue(
-            mapOf(
-                "id" to ref.key,
-                "fromUid" to fromUid,
-                "toUid" to toUid,
-                "note" to note,
-                "status" to "SENT",
-                "createdAt" to System.currentTimeMillis()
-            )
-        ).await()
+    /** Removes a handled notification (e.g. a match request that was responded to). */
+    suspend fun removeNotification(uid: String, notificationId: String) {
+        database.getReference(NODE_NOTIFICATIONS).child(uid).child(notificationId).removeValue().await()
     }
 
     // ---------------- Real-time Chat ----------------
@@ -407,7 +411,8 @@ object FirebaseManager {
         reportedUid: String,
         reportedName: String,
         reason: String,
-        details: String
+        details: String,
+        category: String
     ) {
         val ref = database.getReference(NODE_REPORTS).push()
         ref.setValue(
@@ -416,6 +421,9 @@ object FirebaseManager {
                 "reporterUid" to reporterUid,
                 "reportedUid" to reportedUid,
                 "reportedName" to reportedName,
+                // category must be one of the enum values allowed by
+                // database.rules.json (reports.$reportId.category .validate)
+                "category" to category,
                 "reason" to reason,
                 "details" to details,
                 "status" to "OPEN",
@@ -504,7 +512,9 @@ object FirebaseManager {
     // flow through callables — the backend is the final authority (rule #22).
 
     suspend fun callFunction(name: String, params: Map<String, Any?>): Result<Map<String, Any?>> = try {
-        val result = com.google.firebase.functions.FirebaseFunctions.getInstance()
+        // NOTE: functions are deployed to asia-south1 — the default getInstance()
+        // would hit us-central1 and fail with NOT_FOUND.
+        val result = com.google.firebase.functions.FirebaseFunctions.getInstance("asia-south1")
             .getHttpsCallable(name).call(params).await()
         @Suppress("UNCHECKED_CAST")
         Result.success((result.data as? Map<String, Any?>) ?: emptyMap())

@@ -16,7 +16,6 @@
  */
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
 
@@ -101,15 +100,6 @@ async function assertTargetEligible(target, targetUid, { blockCheckUid } = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// onUserCreated — initialise a new account (rule #1: one account per phone is
-// additionally enforced by database.rules.json phone_index).
-// ---------------------------------------------------------------------------
-exports.onUserCreated = onDocumentCreated("users_rt/{uid}", async (event) => {
-  // placeholder for Firestore-mirrored users; RTDB bootstrap happens client-side
-  return null;
-});
-
-// ---------------------------------------------------------------------------
 // sendMatchRequest (rule #10) — verified-only, duplicate-safe, daily-capped
 // ---------------------------------------------------------------------------
 exports.sendMatchRequest = onCall({ region: "asia-south1" }, async (request) => {
@@ -178,6 +168,7 @@ exports.sendMatchRequest = onCall({ region: "asia-south1" }, async (request) => 
     timeAgo: "Just now",
     isRead: false,
     profileId: uid,
+    requestId: ref.key, // lets the receiver accept/reject in-app (rule #10)
     createdAt: admin.database.ServerValue.TIMESTAMP,
   });
 

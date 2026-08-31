@@ -46,7 +46,7 @@
         ".validate": "newData.hasChildren(['name'])",
         "name":   { ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 60" },
         "bio":    { ".validate": "newData.isString() && newData.val().length <= 1500" },
-        "photoUrls": { ".validate": "newData.hasChildren() && newData.val().length <= 6" }
+        "photoUrls": { ".validate": "!newData.exists() || (newData.hasChildren() && !newData.hasChild('6'))" }
       }
     },
 
@@ -60,11 +60,12 @@
     "notifications": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null"
+        ".write": "auth != null && auth.uid === $uid"
       }
     },
 
     "match_requests": {
+      ".indexOn": ["pairKey"],
       "$reqId": {
         ".read": "auth != null && (data.child('fromUid').val() === auth.uid || data.child('toUid').val() === auth.uid)",
         ".write": false,
@@ -81,6 +82,7 @@
           "$uid": { ".validate": "newData.isBoolean()" }
         },
         "messages": {
+          ".indexOn": ["timestamp"],
           "$msgId": {
             ".validate": "newData.hasChildren(['id','senderId','text','type','timestamp'])"
           }

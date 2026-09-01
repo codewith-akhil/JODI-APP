@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.CameraAlt
@@ -150,7 +151,7 @@ fun PhotoManagerView(
                         onClick = { viewModel.navigateTo(ScreenState.EDIT_PROFILE) }
                     ) {
                         androidx.compose.material3.Icon(
-                            imageVector = androidx.compose.material.icons.automirrored.filled.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = TextPrimary
                         )

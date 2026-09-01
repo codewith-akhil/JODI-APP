@@ -22,7 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.MarkChatRead
+import androidx.compose.material.icons.filled.MarkChatRead
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.filled.Notifications
@@ -109,7 +109,7 @@ fun NotificationsScreen(
             Spacer(modifier = Modifier.weight(1f))
             TextButton(onClick = { viewModel.markAllNotificationsRead() }) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.MarkChatRead,
+                    imageVector = Icons.Filled.MarkChatRead,
                     contentDescription = null,
                     tint = PrimaryEmerald,
                     modifier = Modifier.size(16.dp)

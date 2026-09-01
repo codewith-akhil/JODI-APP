@@ -3,6 +3,6 @@
     <item
         android:width="72dp"
         android:height="72dp"
-        android:drawable="@drawable/SMlogo"
+        android:drawable="@drawable/sm_logo"
         android:gravity="center" />
 </layer-list>

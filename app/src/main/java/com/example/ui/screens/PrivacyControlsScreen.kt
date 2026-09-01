@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,7 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FamilyRestroom
-import androidx.compose.material.icons.filled.Incognito
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MarkChatRead
 import androidx.compose.material.icons.filled.Paid
@@ -204,7 +205,7 @@ fun PrivacyControlsScreen(
             )
 
             PrivacyToggleCard(
-                icon = Icons.Default.Incognito,
+                icon = Icons.Default.VisibilityOff,
                 title = "Incognito Browsing",
                 subtitle = "View profiles without appearing in their visitors list",
                 checked = settings.incognitoMode,

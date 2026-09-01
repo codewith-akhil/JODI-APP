@@ -224,6 +224,7 @@ fun DiscoveryFeedView(
     val myProfile by viewModel.myProfile.collectAsState()
     val verification by viewModel.verificationStatus.collectAsState()
     val mutualMatch by viewModel.mutualMatchProfile.collectAsState()
+    val unreadNotifications by viewModel.unreadNotificationCount.collectAsState()
     var selectedFilter by remember { mutableStateOf("All") }
 
     val filterList = listOf("All", "100% Verified", "Kochi & Ernakulam", "High Porutham (9/10)", "Engineers & Doctors", "Recent Profiles")

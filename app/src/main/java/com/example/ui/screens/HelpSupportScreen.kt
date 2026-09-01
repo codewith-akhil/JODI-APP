@@ -24,7 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.HelpOutline
@@ -170,7 +170,7 @@ fun HelpSupportScreen(
                                 modifier = Modifier.weight(1f)
                             )
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowDown,
+                                imageVector = Icons.Filled.KeyboardArrowDown,
                                 contentDescription = null,
                                 tint = PrimaryBlue,
                                 modifier = Modifier

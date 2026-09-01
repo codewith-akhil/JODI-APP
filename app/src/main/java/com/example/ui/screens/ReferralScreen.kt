@@ -164,7 +164,7 @@ fun ReferralScreen(
                         shape = RoundedCornerShape(14.dp),
                         color = PureWhite,
                         onClick = {
-                            clipboard.setPrimaryClip(AnnotatedString(stats.referralCode))
+                            clipboard.setText(AnnotatedString(stats.referralCode))
                             viewModel.showToast("Referral code copied!")
                         }
                     ) {

@@ -34,6 +34,7 @@ import com.example.ui.screens.MembershipScreen
 import com.example.ui.screens.NoInternetScreen
 import com.example.ui.screens.NotificationsScreen
 import com.example.ui.screens.OnboardingScreen
+import com.example.ui.screens.OtpVerificationScreen
 import com.example.ui.screens.PaymentFailedScreen
 import com.example.ui.screens.PaymentHistoryScreen
 import com.example.ui.screens.PaymentSuccessScreen

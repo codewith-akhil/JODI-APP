@@ -5,7 +5,7 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.data.SampleData
+import com.example.data.AppConfig
 import com.example.matchmaking.FullMatchReport
 import com.example.matchmaking.MatchmakingEngine
 import com.example.model.AppNotification
@@ -25,6 +25,7 @@ import com.example.model.StatusScreenData
 import com.example.model.SuccessStory
 import com.example.model.TransactionRecord
 import com.example.model.UserPhoto
+import com.google.firebase.messaging.FirebaseMessaging
 import com.example.model.VerificationStatus
 import com.example.network.ApiClient
 import com.example.network.CreateRazorpayOrderRequest
@@ -108,7 +109,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentScreen = MutableStateFlow(ScreenState.SPLASH)
     val currentScreen: StateFlow<ScreenState> = _currentScreen.asStateFlow()
 
-    private val _selectedLanguage = MutableStateFlow(SampleData.languages[0]) // Malayalam default
+    private val _selectedLanguage = MutableStateFlow(AppConfig.languages[0]) // Malayalam default
     val selectedLanguage: StateFlow<Language> = _selectedLanguage.asStateFlow()
 
     private val _phoneNumber = MutableStateFlow("")
@@ -138,77 +139,43 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentBottomTab = MutableStateFlow(BottomTab.DISCOVERY)
     val currentBottomTab: StateFlow<BottomTab> = _currentBottomTab.asStateFlow()
 
-    private val _profiles = MutableStateFlow(SampleData.profiles)
+    private val _profiles = MutableStateFlow(emptyList<Profile>())
     val profiles: StateFlow<List<Profile>> = _profiles.asStateFlow()
 
-    private val _selectedProfile = MutableStateFlow<Profile?>(SampleData.profiles[0])
+    private val _selectedProfile = MutableStateFlow<Profile?>(null)
     val selectedProfile: StateFlow<Profile?> = _selectedProfile.asStateFlow()
 
-    private val _userPhotos = MutableStateFlow(SampleData.userPhotos)
+    private val _userPhotos = MutableStateFlow(emptyList<UserPhoto>())
     val userPhotos: StateFlow<List<UserPhoto>> = _userPhotos.asStateFlow()
 
-    private val _myProfile = MutableStateFlow(
-        Profile(
-            id = "SOULMATE_MY_PROFILE",
-            name = "Karthik Nair",
-            age = 27,
-            height = "5 ft 10 in (178 cm)",
-            gender = "Male",
-            photoUrls = listOf(
-                "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&auto=format&fit=crop&q=80",
-                "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=600&auto=format&fit=crop&q=80",
-                "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=600&auto=format&fit=crop&q=80"
-            ),
-            verified = false,
-            trustScore = 75,
-            education = "B.Tech in Computer Science & Engineering",
-            college = "NIT Calicut",
-            profession = "Lead Software Engineer",
-            company = "Amazon AWS / Tech Corp",
-            annualIncome = "₹ 24 Lakhs per Annum",
-            city = "Kochi",
-            district = "Ernakulam",
-            state = "Kerala",
-            nativePlace = "Aluva",
-            religion = "Hindu",
-            caste = "Nair",
-            gothram = "Kashyapa",
-            starNakshatra = "Rohini",
-            rasi = "Rishabham (Taurus)",
-            dosham = "No Dosham / Suddha Jathakam",
-            maritalStatus = "Never Married",
-            motherTongue = "Malayalam",
-            diet = "Non-Vegetarian",
-            drinking = "No",
-            smoking = "No",
-            bio = "Passionate tech professional rooted in cultural and family values. Love traveling across Kerala, photography, and classical music. Looking for a progressive, understanding partner to build a joyful life together.",
-            familyFather = "Retired Assistant Executive Engineer (KSEB)",
-            familyMother = "Homemaker (M.A. Malayalam)",
-            familySiblings = "1 Elder Sister (Married, Architect in Bangalore)",
-            familyType = "Nuclear Family",
-            partnerAgeRange = "23 - 27 Yrs",
-            partnerHeightRange = "5 ft 2 in - 5 ft 8 in",
-            partnerEducation = "B.Tech / MBBS / MBA / Post Graduate",
-            partnerLocation = "Kerala / Bangalore / Abroad",
-            partnerCaste = "Hindu - Nair (Open to all)",
-            isShortlisted = false,
-            isConnected = false,
-            joinedDaysAgo = 1
-        )
+    /** Empty production default — populated from Firebase after login. */
+    private fun emptyProfile(uid: String = "") = Profile(
+        id = uid, name = "", age = 0, height = "", gender = "",
+        photoUrls = emptyList(), verified = false, trustScore = 0,
+        education = "", college = "", profession = "", company = "",
+        annualIncome = "", city = "", district = "", state = "",
+        nativePlace = "", religion = "", caste = "", gothram = "",
+        starNakshatra = "", rasi = "", dosham = "", maritalStatus = "",
+        motherTongue = "", diet = "", drinking = "", smoking = "",
+        bio = "", familyFather = "", familyMother = "", familySiblings = "",
+        familyType = "", partnerAgeRange = "", partnerHeightRange = "",
+        partnerEducation = "", partnerLocation = "", partnerCaste = ""
     )
+
+    private val _myProfile = MutableStateFlow(emptyProfile())
     val myProfile: StateFlow<Profile> = _myProfile.asStateFlow()
 
     private val _verificationStatus = MutableStateFlow(
         VerificationStatus(
             isFaceVerified = false,
             isGovtIdVerified = false,
-            isPhoneVerified = true,
-            isHoroscopeVerified = true,
-            trustScore = 75,
-            govtIdType = "Aadhaar Card",
-            govtIdNumber = "XXXX-XXXX-8921",
+            isPhoneVerified = false,
+            isHoroscopeVerified = false,
+            trustScore = 0,
+            govtIdType = "",
+            govtIdNumber = "",
             faceMatchAccuracy = 0.0f,
-            verificationDate = "Pending"
+            verificationDate = "Not started"
         )
     )
     val verificationStatus: StateFlow<VerificationStatus> = _verificationStatus.asStateFlow()
@@ -216,16 +183,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val _profileCreationDraft = MutableStateFlow(ProfileCreationDraft())
     val profileCreationDraft: StateFlow<ProfileCreationDraft> = _profileCreationDraft.asStateFlow()
 
-    private val _chatThreads = MutableStateFlow(SampleData.sampleThreads)
+    private val _chatThreads = MutableStateFlow(emptyList<ChatThread>())
     val chatThreads: StateFlow<List<ChatThread>> = _chatThreads.asStateFlow()
 
-    private val _activeChat = MutableStateFlow<List<ChatMessage>>(SampleData.sampleChats)
+    private val _activeChat = MutableStateFlow(emptyList<ChatMessage>())
     val activeChat: StateFlow<List<ChatMessage>> = _activeChat.asStateFlow()
 
     private val _isPartnerTyping = MutableStateFlow(false)
     val isPartnerTyping: StateFlow<Boolean> = _isPartnerTyping.asStateFlow()
 
-    private val _membershipPlans = MutableStateFlow(SampleData.membershipPlans)
+    private val _membershipPlans = MutableStateFlow(AppConfig.membershipPlans)
     val membershipPlans: StateFlow<List<MembershipPlan>> = _membershipPlans.asStateFlow()
 
     private val _activePlan = MutableStateFlow<MembershipPlan?>(null)
@@ -242,7 +209,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---------------- New state for the 18 feature pages ----------------
 
-    private val _notifications = MutableStateFlow(SampleData.sampleNotifications)
+    private val _notifications = MutableStateFlow(emptyList<AppNotification>())
     val notifications: StateFlow<List<AppNotification>> = _notifications.asStateFlow()
 
     val unreadNotificationCount: StateFlow<Int> = _notifications
@@ -250,10 +217,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         .map { list -> list.count { !it.isRead } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
-    private val _transactions = MutableStateFlow(SampleData.sampleTransactions)
+    private val _transactions = MutableStateFlow(emptyList<TransactionRecord>())
     val transactions: StateFlow<List<TransactionRecord>> = _transactions.asStateFlow()
 
-    private val _successStories = MutableStateFlow(SampleData.sampleSuccessStories)
+    private val _successStories = MutableStateFlow(emptyList<SuccessStory>())
     val successStories: StateFlow<List<SuccessStory>> = _successStories.asStateFlow()
 
     private val _privacySettings = MutableStateFlow(PrivacySettings())
@@ -316,13 +283,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val _isGoogleSigningIn = MutableStateFlow(false)
     val isGoogleSigningIn: StateFlow<Boolean> = _isGoogleSigningIn.asStateFlow()
 
-    val faqs: List<FaqItem> = SampleData.sampleFaqs
+    val faqs: List<FaqItem> = AppConfig.faqs
 
     // OTP internals
     private var loginVerificationId: String? = null
-    private var isLoginDemoOtpMode = false
     private var accountVerificationId: String? = null
-    private var isAccountDemoOtpMode = false
     private var chatListenerJob: Job? = null
 
     // ---------------- Business-rule engine (membership / limits / OTP policy) ----------------
@@ -428,8 +393,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             _userEmail.value = user.email ?: ""
             _emailVerificationState.value =
                 if (user.email.isNullOrBlank()) "NOT_SET" else if (user.isEmailVerified) "VERIFIED" else "PENDING"
-            // Live-sync notifications from Realtime Database
+            // Live-sync notifications + real profile data from Firebase
             loadFirebaseNotifications()
+            viewModelScope.launch { refreshUserDataFromFirebase() }
         }
     }
 
@@ -448,9 +414,42 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         return MatchmakingEngine.calculateCompatibility(_myProfile.value, targetProfile)
     }
 
-    // Navigation & Actions
+    // ---------------- Navigation with a real back stack ----------------
+
+    private val navigationStack = ArrayDeque<ScreenState>()
+    private val _canGoBack = MutableStateFlow(false)
+    val canGoBack: StateFlow<Boolean> = _canGoBack.asStateFlow()
+
+    private fun ScreenState.isStatusScreen(): Boolean = this in setOf(
+        ScreenState.LOADING, ScreenState.SUCCESS, ScreenState.ERROR,
+        ScreenState.NO_INTERNET, ScreenState.SUBSCRIBED,
+        ScreenState.PAYMENT_SUCCESS, ScreenState.PAYMENT_FAILED
+    )
+
     fun navigateTo(screen: ScreenState) {
+        val current = _currentScreen.value
+        if (screen == current) return
+        if (!current.isStatusScreen() && current != ScreenState.SPLASH) {
+            if (navigationStack.lastOrNull() != current) navigationStack.addLast(current)
+            if (navigationStack.size > 25) navigationStack.removeFirst()
+        }
         _currentScreen.value = screen
+        _canGoBack.value = navigationStack.isNotEmpty()
+    }
+
+    /** Pops the back stack. Returns false when already at the root (system exits). */
+    fun navigateBack(): Boolean {
+        val previous = navigationStack.removeLastOrNull() ?: return false
+        _currentScreen.value = previous
+        _canGoBack.value = navigationStack.isNotEmpty()
+        return true
+    }
+
+    /** Clears history and makes [root] the only screen (auth boundary crossings). */
+    private fun resetToRoot(root: ScreenState) {
+        navigationStack.clear()
+        _currentScreen.value = root
+        _canGoBack.value = false
     }
 
     fun selectLanguage(language: Language) {
@@ -481,7 +480,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun requestOtp(activity: Activity) {
         if (phoneNumber.value.isBlank()) {
-            setPhoneNumber("9876543210")
+            showToast("Please enter your mobile number first.")
+            return
+        }
+        if (phoneNumber.value.length < 10) {
+            showToast("Please enter a valid 10-digit mobile number.")
+            return
         }
         _isOtpSending.value = true
         _loadingMessage.value = "Sending OTP to ${countryCode.value} ${phoneNumber.value}..."
@@ -493,11 +497,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             onCodeSent = { verificationId ->
                 _isOtpSending.value = false
                 loginVerificationId = verificationId
-                isLoginDemoOtpMode = false
                 otpSentAtMillis = System.currentTimeMillis()
                 _otpAttemptCount.value = 0
-                _currentScreen.value = ScreenState.OTP_VERIFY
-                showToast("OTP sent to $fullPhone via Firebase")
+                navigateTo(ScreenState.OTP_VERIFY)
+                showToast("OTP sent to $fullPhone")
             },
             onAutoVerified = {
                 _isOtpSending.value = false
@@ -506,11 +509,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             },
             onFailed = { error ->
                 _isOtpSending.value = false
-                // Graceful demo fallback when Firebase SMS is unavailable
-                isLoginDemoOtpMode = true
                 loginVerificationId = null
-                _currentScreen.value = ScreenState.OTP_VERIFY
-                showToast("Demo mode enabled — use OTP 123456. (${error.take(60)})")
+                // Stay on the login screen with a clear, honest error
+                val friendly = when {
+                    error.contains("invalid-phone-number", true) ->
+                        "That mobile number is not valid. Please check and try again."
+                    error.contains("too-many-requests", true) ->
+                        "Too many attempts. Please wait a few minutes before retrying."
+                    error.contains("network", true) ->
+                        "Network error. Please check your internet connection."
+                    else -> "Could not send OTP. Please try again in a moment."
+                }
+                showToast(friendly)
             }
         )
     }
@@ -528,25 +538,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             return false
         }
 
-        if (isLoginDemoOtpMode || loginVerificationId == null) {
-            return if (enteredOtp == "123456" || enteredOtp == "1234") {
-                _isVerifyingOtp.value = true
-                _currentScreen.value = ScreenState.LOADING
-                _loadingMessage.value = "Verifying your mobile number..."
-                viewModelScope.launch {
-                    delay(1200)
-                    _isVerifyingOtp.value = false
-                    handleLoginSuccess()
-                }
-                true
-            } else {
-                _isOtpError.value = true
-                _otpAttemptCount.value += 1
-                if (_otpAttemptCount.value >= OTP_MAX_ATTEMPTS) {
-                    showToast("Maximum 5 OTP attempts exceeded. Please request a new OTP.")
-                }
-                false
-            }
+        if (loginVerificationId == null) {
+            showToast("Please request an OTP first.")
+            return false
         }
 
         if (enteredOtp.length < 6) {
@@ -597,23 +591,28 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 // offline / rules — app continues in local mode
             }
         }
-        if (!_isProfileCompleted.value) {
-            _currentScreen.value = ScreenState.PROFILE_CREATION
-            showToast("Welcome! Please complete your biodata to start matching.")
-        } else {
-            _currentScreen.value = ScreenState.SUCCESS
-            _statusScreenData.value = StatusScreenData(
-                kind = "SUCCESS",
-                title = "Login Successful!",
-                message = "Welcome back to Soulmate Matrimony. Your verified matches are waiting for you.",
-                actionLabel = "Start Exploring",
-                destination = "MAIN_APP"
-            )
+
+        // Route through real Firebase data: load biodata, then decide
+        _currentScreen.value = ScreenState.LOADING
+        _loadingMessage.value = "Signing you in..."
+        viewModelScope.launch {
+            refreshEntitlementsFromServer()
+            refreshUserDataFromFirebase()
+            syncFcmToken()
+            if (_isProfileCompleted.value) {
+                resetToRoot(ScreenState.MAIN_APP)
+                showToast("Welcome back to Soulmate Matrimony!")
+            } else {
+                resetToRoot(ScreenState.PROFILE_CREATION)
+                showToast("Welcome! Please complete your biodata to start matching.")
+            }
+            loadProfilesFromFirebase()
+            loadSuccessStoriesFromFirebase()
         }
-        // One active account per phone (rule #1) + entitlement sync (rule #16)
+
+        // One active account per phone (rule #1)
         viewModelScope.launch {
             FirebaseManager.registerPhoneIndex("${countryCode.value}${phoneNumber.value}")
-            refreshEntitlementsFromServer()
         }
         // Refresh e-mail state + live notifications for the signed-in user
         FirebaseManager.currentUser?.let { user ->
@@ -622,6 +621,177 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 if (user.email.isNullOrBlank()) "NOT_SET" else if (user.isEmailVerified) "VERIFIED" else "PENDING"
         }
         loadFirebaseNotifications()
+    }
+
+    // ---------------- Live data loading from Firebase ----------------
+
+    /**
+     * Pulls the signed-in user's biodata, photos, verification state and
+     * privacy settings from Realtime Database into the UI state.
+     */
+    private suspend fun refreshUserDataFromFirebase() {
+        if (!FirebaseManager.isSignedIn()) return
+        val uid = FirebaseManager.currentUid ?: return
+        try {
+            val profileMap = FirebaseManager.fetchProfile(uid)
+            if (profileMap != null) {
+                val p = mapToProfile(uid, profileMap) ?: return
+                _myProfile.value = p
+                _isProfileCompleted.value = p.name.isNotBlank() && p.age >= 18
+                _userPhotos.value = p.photoUrls.mapIndexed { i, url ->
+                    UserPhoto(id = "up_$i", url = url, isProfilePicture = i == 0, status = "Approved")
+                }
+            }
+            FirebaseManager.fetchPrivacySettings(uid)?.let { s ->
+                _privacySettings.value = PrivacySettings(
+                    profileVisibility = (s["profileVisibility"] as? String) ?: "Everyone",
+                    photoVisibility = (s["photoVisibility"] as? String) ?: "All Users",
+                    showHoroscope = (s["showHoroscope"] as? Boolean) ?: true,
+                    showIncome = (s["showIncome"] as? Boolean) ?: false,
+                    showFamilyDetails = (s["showFamilyDetails"] as? Boolean) ?: true,
+                    allowDirectCalls = (s["allowDirectCalls"] as? Boolean) ?: true,
+                    lastSeenVisible = (s["lastSeenVisible"] as? Boolean) ?: true,
+                    readReceiptsEnabled = (s["readReceiptsEnabled"] as? Boolean) ?: true,
+                    incognitoMode = (s["incognitoMode"] as? Boolean) ?: false
+                )
+            }
+            val v = FirebaseManager.fetchVerification(uid)
+            if (v != null) {
+                _verificationStatus.value = VerificationStatus(
+                    isFaceVerified = (v["isFaceVerified"] as? Boolean) ?: false,
+                    isGovtIdVerified = (v["isGovtIdVerified"] as? Boolean) ?: false,
+                    isPhoneVerified = FirebaseManager.isSignedIn(),
+                    isHoroscopeVerified = (v["isHoroscopeVerified"] as? Boolean) ?: false,
+                    trustScore = (v["trustScore"] as? Long)?.toInt() ?: 0,
+                    govtIdType = (v["govtIdType"] as? String) ?: "",
+                    govtIdNumber = (v["govtIdNumber"] as? String) ?: "",
+                    faceMatchAccuracy = ((v["faceMatchAccuracy"] as? Number)?.toFloat()) ?: 0f,
+                    verificationDate = (v["verificationDate"] as? String) ?: "Not started"
+                )
+            } else {
+                _verificationStatus.value = _verificationStatus.value.copy(isPhoneVerified = true)
+            }
+        } catch (e: Exception) {
+            // offline tolerant — the UI renders empty states
+        }
+    }
+
+    /** Fetches real member profiles via the server-authoritative callable. */
+    private suspend fun loadProfilesFromFirebase() {
+        if (!FirebaseManager.isSignedIn()) return
+        try {
+            val result = FirebaseManager.callFunction("discoverProfiles", emptyMap())
+            result.onSuccess { res ->
+                @Suppress("UNCHECKED_CAST")
+                val list = (res["profiles"] as? List<Map<String, Any?>>) ?: emptyList()
+                val uid = FirebaseManager.currentUid ?: return@onSuccess
+                val mapped = list.mapNotNull { mapToProfile((it["id"] as? String) ?: "", it) }
+                val blocked = _blockedUsers.value.map { it.id }.toSet()
+                _profiles.value = mapped.filter { it.id != uid && it.id !in blocked }
+            }
+        } catch (e: Exception) {
+            // offline tolerant — discovery shows the empty state until connected
+        }
+    }
+
+    /** Public refresh used by pull-to-refresh style actions. */
+    fun refreshDiscoveryProfiles() {
+        viewModelScope.launch { loadProfilesFromFirebase() }
+    }
+
+    private suspend fun loadSuccessStoriesFromFirebase() {
+        try {
+            val remote = FirebaseManager.fetchSuccessStories()
+            if (remote.isNotEmpty()) {
+                _successStories.value = remote.mapNotNull { s ->
+                    @Suppress("UNCHECKED_CAST")
+                    val names = (s["coupleNames"] as? Map<String, Any?>)
+                    SuccessStory(
+                        id = (s["id"] as? String) ?: return@mapNotNull null,
+                        groomName = (names?.get("groom") as? String) ?: (s["groomName"] as? String) ?: "",
+                        brideName = (names?.get("bride") as? String) ?: (s["brideName"] as? String) ?: "",
+                        location = (s["location"] as? String) ?: "",
+                        marriedOn = (s["marriedOn"] as? String) ?: "",
+                        story = (s["story"] as? String) ?: "",
+                        matchScore = ((s["poruthamScore"] as? Number)?.toInt())
+                            ?: ((s["matchScore"] as? Number)?.toInt()) ?: 0,
+                        photoUrl = (s["imageUrl"] as? String) ?: (s["photoUrl"] as? String) ?: ""
+                    )
+                }
+            }
+        } catch (e: Exception) { /* offline tolerant */ }
+    }
+
+    /** Maps a users/{uid} node into the Profile UI model. */
+    private fun mapToProfile(id: String, m: Map<String, Any?>): Profile? {
+        val name = (m["name"] as? String) ?: return null
+        if (name.isBlank()) return null
+        fun s(key: String) = m[key] as? String ?: ""
+        fun i(key: String) = (m[key] as? Number)?.toInt() ?: 0
+        @Suppress("UNCHECKED_CAST")
+        val photos = (m["photoUrls"] as? List<String>) ?: emptyList()
+        val joinedMillis = (m["createdAt"] as? Number)?.toLong() ?: 0L
+        val joinedDays = if (joinedMillis > 0)
+            ((System.currentTimeMillis() - joinedMillis) / 86_400_000L).toInt() else 0
+        val verif = (m["verification"] as? Map<*, *>)
+        val isVerifiedProfile = (verif?.get("status") as? String) == "VERIFIED" ||
+            (m["verified"] as? Boolean) ?: false
+        return Profile(
+            id = id.ifBlank { s("uid") },
+            name = name,
+            age = i("age"),
+            height = s("height"),
+            gender = s("gender"),
+            photoUrls = photos,
+            verified = isVerifiedProfile,
+            trustScore = i("trustScore"),
+            education = s("education"),
+            college = s("college"),
+            profession = s("profession"),
+            company = s("company"),
+            annualIncome = s("annualIncome"),
+            city = s("city"),
+            district = s("district"),
+            state = s("state"),
+            nativePlace = s("nativePlace"),
+            religion = s("religion"),
+            caste = s("caste"),
+            gothram = s("gothram"),
+            starNakshatra = s("starNakshatra"),
+            rasi = s("rasi"),
+            dosham = s("dosham"),
+            maritalStatus = s("maritalStatus"),
+            motherTongue = s("motherTongue"),
+            diet = s("diet"),
+            drinking = s("drinking"),
+            smoking = s("smoking"),
+            bio = s("bio"),
+            familyFather = s("familyFather"),
+            familyMother = s("familyMother"),
+            familySiblings = s("familySiblings"),
+            familyType = s("familyType"),
+            partnerAgeRange = s("partnerAgeRange"),
+            partnerHeightRange = s("partnerHeightRange"),
+            partnerEducation = s("partnerEducation"),
+            partnerLocation = s("partnerLocation"),
+            partnerCaste = s("partnerCaste"),
+            joinedDaysAgo = joinedDays
+        )
+    }
+
+    // ---------------- FCM push notification token ----------------
+
+    /** Registers this device's FCM token so the server can push matches & messages. */
+    private fun syncFcmToken() {
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (!task.isSuccessful) return@addOnCompleteListener
+            val token = task.result
+            viewModelScope.launch {
+                try {
+                    FirebaseManager.upsertUser(myUid(), mapOf("fcmToken" to token))
+                } catch (e: Exception) { /* offline tolerant */ }
+            }
+        }
     }
 
     // ---------------- Google Sign-In (Credential Manager) ----------------
@@ -654,10 +824,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         FirebaseManager.signOut()
         chatListenerJob?.cancel()
         loginVerificationId = null
-        isLoginDemoOtpMode = false
         _otpCode.value = ""
         _accountOtpCode.value = ""
-        _currentScreen.value = ScreenState.LOGIN
+        _profiles.value = emptyList()
+        _chatThreads.value = emptyList()
+        _notifications.value = emptyList()
+        _transactions.value = emptyList()
+        _userPhotos.value = emptyList()
+        _myProfile.value = emptyProfile()
+        _isProfileCompleted.value = false
+        _membershipTier.value = "FREE"
+        _subscriptionExpiryMillis.value = 0L
+        resetToRoot(ScreenState.LOGIN)
         showToast("You have been logged out safely.")
     }
 
@@ -667,14 +845,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _pendingAccountAction.value = action
         _accountOtpCode.value = ""
         _accountOtpError.value = false
-        _currentScreen.value = ScreenState.ACCOUNT_VERIFICATION
+        navigateTo(ScreenState.ACCOUNT_VERIFICATION)
     }
 
     fun sendAccountActionOtp(activity: Activity) {
         _isAccountOtpSending.value = true
         // Use the authenticated phone number; fall back to entered one
         val registeredPhone = FirebaseManager.currentUserPhone
-            ?: "${countryCode.value}${phoneNumber.value.ifBlank { "9876543210" }}"
+            ?: "${countryCode.value}${phoneNumber.value}"
 
         FirebaseManager.sendPhoneOtp(
             activity = activity,
@@ -682,7 +860,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             onCodeSent = { verificationId ->
                 _isAccountOtpSending.value = false
                 accountVerificationId = verificationId
-                isAccountDemoOtpMode = false
                 showToast("Verification code sent to $registeredPhone")
             },
             onAutoVerified = {
@@ -691,28 +868,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             },
             onFailed = { error ->
                 _isAccountOtpSending.value = false
-                isAccountDemoOtpMode = true
                 accountVerificationId = null
-                showToast("Demo mode — use OTP 123456. (${error.take(50)})")
+                showToast("Could not send the verification code. Please try again.")
             }
         )
     }
 
     fun verifyAccountActionOtp(enteredOtp: String): Boolean {
-        if (isAccountDemoOtpMode || accountVerificationId == null) {
-            return if (enteredOtp == "123456" || enteredOtp == "1234") {
-                _currentScreen.value = ScreenState.LOADING
-                _loadingMessage.value = if (pendingAccountAction.value == PendingAccountAction.DELETE)
-                    "Deleting your account securely..." else "Deactivating your profile..."
-                viewModelScope.launch {
-                    delay(1000)
-                    performPendingAccountAction()
-                }
-                true
-            } else {
-                _accountOtpError.value = true
-                false
-            }
+        if (accountVerificationId == null) {
+            showToast("Please request a verification code first.")
+            return false
         }
 
         if (enteredOtp.length < 6) {
@@ -794,7 +959,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun viewProfile(profile: Profile) {
         _selectedProfile.value = profile
-        _currentScreen.value = ScreenState.PROFILE_DETAIL
+        navigateTo(ScreenState.PROFILE_DETAIL)
     }
 
     fun toggleShortlist(profileId: String) {
@@ -917,7 +1082,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         _selectedProfile.value = profile
-        _currentScreen.value = ScreenState.CHAT_DETAIL
+        navigateTo(ScreenState.CHAT_DETAIL)
 
         chatListenerJob?.cancel()
         if (FirebaseManager.isSignedIn()) {
@@ -929,16 +1094,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                         _activeChat.value = maps.mapNotNull { mapToChatMessage(it, profile.id) }
                     }
                 } catch (e: Exception) {
-                    _activeChat.value = SampleData.sampleChats
+                    _activeChat.value = emptyList()
                 }
             }
         } else {
-            _activeChat.value = SampleData.sampleChats
+            showToast("Please sign in to start chatting.")
         }
     }
 
     fun exitChat() {
         chatListenerJob?.cancel()
+        if (_currentScreen.value == ScreenState.CHAT_DETAIL) navigateBack()
     }
 
     private fun mapToChatMessage(map: Map<String, Any?>, profileId: String): ChatMessage? {
@@ -968,12 +1134,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         // Rule #11/#16 — Free: message 1 unique user per day
-        val isDemoTarget = profile.id.startsWith("SOULMATE_")
-        if (FirebaseManager.isSignedIn() && !isDemoTarget && !isPremium &&
+        if (!isPremium &&
             !_dailyMessageUsers.value.contains(profile.id) &&
             _dailyMessageUsers.value.size >= MAX_MESSAGE_USERS_PER_DAY
         ) {
             showStatusScreen(upgradePromptFor("MESSAGE"))
+            return
+        }
+
+        if (!FirebaseManager.isSignedIn()) {
+            showToast("Please sign in to start chatting.")
             return
         }
 
@@ -989,11 +1159,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
         if (FirebaseManager.isSignedIn()) {
             viewModelScope.launch {
-                if (isDemoTarget) {
-                    // Demo profiles have no real server thread — local reply only
-                    simulateAutoReply(text, profile.id)
-                    return@launch
-                }
                 // Server is the final authority (rule #22). Direct RTDB writes to
                 // `chats` are denied by database.rules.json by design.
                 FirebaseManager.callFunction(
@@ -1013,8 +1178,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             }
-        } else {
-            simulateAutoReply(text, profile.id)
         }
     }
 
@@ -1053,37 +1216,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }.onFailure {
                 showToast("Photo upload failed. Check your connection.")
-            }
-        }
-    }
-
-    private fun simulateAutoReply(originalText: String, profileId: String) {
-        viewModelScope.launch {
-            delay(1500)
-            _isPartnerTyping.value = true
-            delay(2000)
-            _isPartnerTyping.value = false
-
-            val replyText = when {
-                originalText.contains("horoscope", true) || originalText.contains("jathakam", true) ->
-                    "Namaskaram! Our families matched the Jathakam. 9/10 Poruthams agree perfectly! Would love to proceed."
-                originalText.contains("parents", true) || originalText.contains("speak", true) ->
-                    "Yes, sure! My father can speak with your family this Sunday afternoon."
-                originalText.contains("photo", true) ->
-                    "Sure, I have uploaded recent traditional wedding photos to my profile!"
-                else ->
-                    "Thank you for reaching out! Looking forward to getting to know each other better."
-            }
-
-            _activeChat.update {
-                it + ChatMessage(
-                    id = "reply_${System.currentTimeMillis()}",
-                    profileId = profileId,
-                    message = replyText,
-                    timestamp = "Just now",
-                    isFromMe = false,
-                    isRead = true
-                )
             }
         }
     }
@@ -1167,14 +1299,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         val newProfile = Profile(
-            id = "SOULMATE_${System.currentTimeMillis() % 10000}",
-            name = if (draft.name.isNotBlank()) draft.name else "Karthik Nair",
+            id = myUid(),
+            name = draft.name.trim(),
             age = computedAge,
             height = draft.height,
             gender = draft.gender,
-            photoUrls = _userPhotos.value.map { it.url }.ifEmpty {
-                listOf("https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&auto=format&fit=crop&q=80")
-            },
+            photoUrls = _userPhotos.value.map { it.url },
             verified = _verificationStatus.value.isFaceVerified || _verificationStatus.value.isGovtIdVerified,
             trustScore = _verificationStatus.value.trustScore,
             education = draft.education,
@@ -1848,7 +1978,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 try {
                     val blockedIds = FirebaseManager.fetchBlockedUsers(myUid())
                     if (blockedIds.isNotEmpty()) {
-                        _blockedUsers.value = SampleData.profiles.filter { it.id in blockedIds }
+                        _blockedUsers.value = _profiles.value.filter { it.id in blockedIds }
                     }
                 } catch (e: Exception) { /* offline tolerant */ }
             }
@@ -1917,7 +2047,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         _callSession.value = CallSession(profile = profile, isVideo = isVideo, callState = "RINGING")
-        _currentScreen.value = ScreenState.CALL_SCREEN
+        navigateTo(ScreenState.CALL_SCREEN)
     }
 
     fun connectCall() {
@@ -1926,12 +2056,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun endCall() {
         _callSession.value = null
-        _currentScreen.value = ScreenState.CHAT_DETAIL
+        if (!navigateBack()) navigateTo(ScreenState.CHAT_DETAIL)
     }
 
     fun dismissCallScreen() {
         _callSession.value = null
-        _currentScreen.value = ScreenState.MAIN_APP
+        if (!navigateBack()) navigateTo(ScreenState.MAIN_APP)
     }
 
     // ---------------- Full-screen photo viewer ----------------
@@ -1939,7 +2069,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun openPhotoViewer(urls: List<String>, startIndex: Int) {
         _photoViewerUrls.value = urls
         _photoViewerIndex.value = startIndex
-        _currentScreen.value = ScreenState.PHOTO_VIEWER
+        navigateTo(ScreenState.PHOTO_VIEWER)
     }
 
     fun setPhotoViewerIndex(index: Int) {
@@ -1947,7 +2077,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun closePhotoViewer() {
-        _currentScreen.value = ScreenState.PROFILE_DETAIL
+        if (!navigateBack()) navigateTo(ScreenState.PROFILE_DETAIL)
     }
 
     // ---------------- Referral ----------------

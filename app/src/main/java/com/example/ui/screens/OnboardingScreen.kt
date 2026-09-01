@@ -67,19 +67,19 @@ fun OnboardingScreen(
             icon = Icons.Default.Favorite,
             title = "Find Your Life Partner",
             body = "Browse thousands of verified matrimony profiles from your community, with families involved every step of the way — the traditional way, modernised.",
-            imageRes = R.drawable.jodii_round_logo_1788189533916
+            imageRes = R.drawable.ic_jodii_logo
         ),
         OnboardingSlide(
             icon = Icons.Default.Security,
             title = "100% Verified & Safe",
             body = "AI face liveness checks, DigiLocker government ID verification and Trust Scores keep fake profiles out. Your number stays private until you choose to share.",
-            imageRes = R.drawable.jodii_round_logo_1788189533916
+            imageRes = R.drawable.ic_jodii_logo
         ),
         OnboardingSlide(
             icon = Icons.Default.Stars,
             title = "Vedic Horoscope Matching",
             body = "Our engine computes all 10 sacred Poruthams and 36 Guna points instantly, so your families can match horoscopes with confidence.",
-            imageRes = R.drawable.jodii_round_logo_1788189533916
+            imageRes = R.drawable.ic_jodii_logo
         )
     )
 
@@ -129,8 +129,8 @@ fun OnboardingScreen(
                         .padding(horizontal = 5.dp)
                         .size(if (index == pagerState.currentPage) 11.dp else 8.dp)
                         .background(
-                            if (index == pagerState.currentPage) PrimaryBlue
-                            else PrimaryBlue.copy(alpha = 0.25f),
+                            if (index == pagerState.currentPage) PrimaryEmerald
+                            else PrimaryEmerald.copy(alpha = 0.25f),
                             CircleShape
                         )
                 )
@@ -148,7 +148,7 @@ fun OnboardingScreen(
                 }
             },
             colors = ButtonDefaults.buttonColors(
-                containerColor = PrimaryBlue,
+                containerColor = PrimaryEmerald,
                 contentColor = PureWhite
             ),
             shape = RoundedCornerShape(16.dp),

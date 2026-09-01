@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cold-start window background: brand emerald gradient with the real
+     JODI SOULMATE emblem centered — matches the Compose landing screen. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#FF064E3B"
+                android:centerColor="#FF059669"
+                android:endColor="#FF0D9488"
+                android:type="linear" />
+        </shape>
+    </item>
+    <item android:gravity="center">
+        <bitmap
+            android:src="@drawable/ic_jodii_logo"
+            android:gravity="center" />
+    </item>
+</layer-list>

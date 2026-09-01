@@ -2,17 +2,14 @@ package com.example.ui.screens
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,9 +29,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Button
@@ -51,15 +46,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -68,90 +59,42 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.data.SampleData
+import com.example.data.AppConfig
 import com.example.model.Language
 import com.example.ui.theme.*
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.ScreenState
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.random.Random
 
-// 3D Star Particle for Ambient Background
-private data class StarParticle(
-    val xRatio: Float,
-    val yRatio: Float,
-    val zDepth: Float,
-    val speed: Float,
-    val size: Float,
-    val baseAlpha: Float
-)
-
+/**
+ * Landing screen — the app's first impression.
+ *
+ * Clean emerald-brand gradient (matches the JODI SOULMATE emblem colours),
+ * the real logo, the brand wordmark and a single clear call-to-action.
+ * No decorative background graphics — pure, premium and fast.
+ */
 @Composable
 fun SplashScreen(
     viewModel: AppViewModel,
     modifier: Modifier = Modifier
 ) {
-    val scale = remember { Animatable(0.7f) }
+    val scale = remember { Animatable(0.85f) }
     val alphaAnim = remember { Animatable(0f) }
 
-    // 3D Gyroscopic Rotations
-    val infiniteTransition = rememberInfiniteTransition(label = "3d_rotation")
-    val rotationAngleY by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
+    // Gentle breathing on the logo emblem — subtle, premium
+    val infiniteTransition = rememberInfiniteTransition(label = "logo_breath")
+    val logoBreath by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.045f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 10000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "angle_y"
-    )
-    val ringTiltAngle by infiniteTransition.animateFloat(
-        initialValue = -25f,
-        targetValue = 25f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4000, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "ring_tilt"
+        label = "logo_scale"
     )
-    val pulseAura by infiniteTransition.animateFloat(
-        initialValue = 0.85f,
-        targetValue = 1.25f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2400, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse_aura"
-    )
-    val sparkleGlow by infiniteTransition.animateFloat(
-        initialValue = 0.5f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "sparkle"
-    )
-
-    // Precompute random 3D star particles
-    val particles = remember {
-        List(40) {
-            val rng = Random(it * 101)
-            StarParticle(
-                xRatio = rng.nextFloat(),
-                yRatio = rng.nextFloat(),
-                zDepth = rng.nextFloat() * 0.8f + 0.2f,
-                speed = rng.nextFloat() * 1.5f + 0.5f,
-                size = rng.nextFloat() * 4.5f + 2f,
-                baseAlpha = rng.nextFloat() * 0.6f + 0.3f
-            )
-        }
-    }
 
     LaunchedEffect(Unit) {
-        alphaAnim.animateTo(1f, animationSpec = tween(600))
-        scale.animateTo(1f, animationSpec = tween(800, easing = FastOutSlowInEasing))
+        alphaAnim.animateTo(1f, animationSpec = tween(500))
+        scale.animateTo(1f, animationSpec = tween(700, easing = FastOutSlowInEasing))
     }
 
     val onGetStarted = {
@@ -164,97 +107,14 @@ fun SplashScreen(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF034A6E), // Radiant Deep Ocean Blue
-                        PrimaryEmerald,    // Rich Emerald Green
-                        PrimaryTeal,       // Auspicious Teal Cyan
-                        Color(0xFF065F46)  // Forest Emerald
+                        Color(0xFF064E3B),  // Deep brand emerald (emblem border green)
+                        PrimaryEmerald,     // Rich Emerald Green 0xFF059669
+                        PrimaryTeal         // Auspicious Teal Cyan 0xFF0D9488
                     )
                 )
-            )
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onGetStarted
             ),
         contentAlignment = Alignment.Center
     ) {
-        // FULLSCREEN 3D CANVAS ANIMATION (Cosmic Stars, Sacred Halo, Interlocking 3D Rings)
-        Canvas(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            val width = size.width
-            val height = size.height
-            val centerX = width / 2f
-            val centerY = height * 0.32f
-
-            // 1. Draw 3D Celestial Particles
-            particles.forEach { particle ->
-                val px = (particle.xRatio * width + (rotationAngleY * particle.speed * 0.3f)) % width
-                val py = particle.yRatio * height
-                val particleRadius = particle.size * particle.zDepth
-                val particleAlpha = (particle.baseAlpha * sparkleGlow).coerceIn(0.1f, 1f)
-
-                drawCircle(
-                    color = SkyBlue.copy(alpha = particleAlpha),
-                    radius = particleRadius,
-                    center = Offset(px, py)
-                )
-            }
-
-            // 2. Glowing Sacred Aura Halo
-            val auraRadius = (130.dp.toPx()) * pulseAura
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        SkyBlue.copy(alpha = 0.35f * sparkleGlow),
-                        MintGreen.copy(alpha = 0.2f),
-                        Color.Transparent
-                    ),
-                    center = Offset(centerX, centerY),
-                    radius = auraRadius
-                ),
-                radius = auraRadius,
-                center = Offset(centerX, centerY)
-            )
-
-            // 3. Sacred Geometry 12-Ray Star Mandala (Rotating)
-            rotate(degrees = rotationAngleY * 0.2f, pivot = Offset(centerX, centerY)) {
-                val rayCount = 12
-                val innerRadius = 70.dp.toPx()
-                val outerRadius = 105.dp.toPx() * (1f + (pulseAura - 1f) * 0.3f)
-
-                for (i in 0 until rayCount) {
-                    val angle = Math.toRadians((i * (360.0 / rayCount)))
-                    val startX = (centerX + innerRadius * cos(angle)).toFloat()
-                    val startY = (centerY + innerRadius * sin(angle)).toFloat()
-                    val endX = (centerX + outerRadius * cos(angle)).toFloat()
-                    val endY = (centerY + outerRadius * sin(angle)).toFloat()
-
-                    drawLine(
-                        brush = Brush.linearGradient(
-                            colors = listOf(LightBlue.copy(alpha = 0.6f), Color.Transparent),
-                            start = Offset(startX, startY),
-                            end = Offset(endX, endY)
-                        ),
-                        start = Offset(startX, startY),
-                        end = Offset(endX, endY),
-                        strokeWidth = 2.dp.toPx(),
-                        cap = StrokeCap.Round
-                    )
-                }
-            }
-
-            // 4. Interlocking 3D Gyroscopic Rings
-            draw3DWeddingRings(
-                centerX = centerX,
-                centerY = centerY,
-                rotationAngle = rotationAngleY,
-                tiltAngle = ringTiltAngle,
-                sparkle = sparkleGlow
-            )
-        }
-
-        // FOREGROUND CONTENT (Logo, Branding, Buttons)
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween,
@@ -262,23 +122,24 @@ fun SplashScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(horizontal = 24.dp, vertical = 24.dp)
+                .padding(horizontal = 24.dp, vertical = 32.dp)
+                .alpha(alphaAnim.value)
         ) {
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // 512x512 Round Shaped Emblem Logo
+            // Real JODI SOULMATE emblem in a crisp white disc
             Box(
                 modifier = Modifier
-                    .scale(scale.value)
-                    .size(105.dp)
+                    .scale(scale.value * logoBreath)
+                    .size(128.dp)
                     .clip(CircleShape)
                     .background(PureWhite)
-                    .padding(3.dp),
+                    .padding(4.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_jodii_logo),
-                    contentDescription = "Soulmate Logo",
+                    contentDescription = "JODI Soulmate Logo",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxSize()
@@ -294,64 +155,46 @@ fun SplashScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "SOULMATE",
-                    fontSize = 36.sp,
+                    text = "JODI SOULMATE",
+                    fontSize = 34.sp,
                     fontWeight = FontWeight.Black,
                     color = PureWhite,
-                    letterSpacing = 6.sp,
+                    letterSpacing = 4.sp,
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = "Sparkle",
-                        tint = SkyBlue,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "PREMIUM MATRIMONY",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = LightTeal,
-                        letterSpacing = 3.sp
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = "Sparkle",
-                        tint = SkyBlue,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = "Where Hearts Meet & Destinies Align\nവിശ്വസനീയമായ സൗൾമേറ്റ് മാട്രിമോണി",
+                    text = "PREMIUM MATRIMONY",
                     fontSize = 13.sp,
-                    color = PureWhite.copy(alpha = 0.95f),
-                    textAlign = TextAlign.Center,
-                    lineHeight = 18.sp,
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                    fontWeight = FontWeight.Bold,
+                    color = LightGold,
+                    letterSpacing = 4.sp
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Where Hearts Meet & Destinies Align",
+                    fontSize = 14.sp,
+                    color = PureWhite.copy(alpha = 0.95f),
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(22.dp))
 
                 // Verified Badge Pill
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .background(Color(0x33FFFFFF), RoundedCornerShape(50.dp))
-                        .padding(horizontal = 16.dp, vertical = 7.dp)
+                        .background(Color(0x2EFFFFFF), RoundedCornerShape(50.dp))
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Security,
                         contentDescription = "Verified",
-                        tint = LightTeal,
+                        tint = LightGold,
                         modifier = Modifier.size(17.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -363,14 +206,14 @@ fun SplashScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(28.dp))
 
                 // Get Started Button
                 Button(
                     onClick = onGetStarted,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = PureWhite,
-                        contentColor = PrimaryEmerald
+                        contentColor = Color(0xFF047857)
                     ),
                     shape = RoundedCornerShape(16.dp),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp),
@@ -379,108 +222,16 @@ fun SplashScreen(
                         .height(56.dp)
                         .testTag("splash_get_started_button")
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "Get Started / ആരംഭിക്കൂ",
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = PrimaryEmerald
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = null,
-                            tint = PrimaryEmerald,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    Text(
+                        text = "Get Started",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF047857)
+                    )
                 }
             }
         }
     }
-}
-
-/**
- * 3D Projection Canvas Drawing for Interlocking Wedding Rings
- */
-private fun DrawScope.draw3DWeddingRings(
-    centerX: Float,
-    centerY: Float,
-    rotationAngle: Float,
-    tiltAngle: Float,
-    sparkle: Float
-) {
-    val ringRadius = 46.dp.toPx()
-    val ringStroke = 6.dp.toPx()
-
-    // Ring 1 (Emerald Cyan Band) - Tilted Left
-    val ring1Offset = Offset(centerX - 24.dp.toPx(), centerY)
-    val ring1ScaleX = cos(Math.toRadians((rotationAngle).toDouble())).toFloat().coerceIn(-1f, 1f)
-    val ring1Width = (ringRadius * (0.6f + 0.4f * kotlin.math.abs(ring1ScaleX)))
-
-    drawOval(
-        brush = Brush.sweepGradient(
-            colors = listOf(
-                MintGreen,
-                SkyBlue,
-                PureWhite,
-                PrimaryEmerald,
-                MintGreen
-            ),
-            center = ring1Offset
-        ),
-        topLeft = Offset(ring1Offset.x - ring1Width, ring1Offset.y - ringRadius),
-        size = androidx.compose.ui.geometry.Size(ring1Width * 2, ringRadius * 2),
-        style = Stroke(width = ringStroke)
-    )
-
-    // Ring 2 (Sapphire Blue Diamond Band) - Interlocking Right
-    val ring2Offset = Offset(centerX + 24.dp.toPx(), centerY)
-    val ring2ScaleX = cos(Math.toRadians((rotationAngle + 60).toDouble())).toFloat().coerceIn(-1f, 1f)
-    val ring2Width = (ringRadius * (0.6f + 0.4f * kotlin.math.abs(ring2ScaleX)))
-
-    drawOval(
-        brush = Brush.sweepGradient(
-            colors = listOf(
-                PureWhite,
-                SkyBlue,
-                SapphireBlue,
-                LightTeal,
-                PureWhite
-            ),
-            center = ring2Offset
-        ),
-        topLeft = Offset(ring2Offset.x - ring2Width, ring2Offset.y - ringRadius),
-        size = androidx.compose.ui.geometry.Size(ring2Width * 2, ringRadius * 2),
-        style = Stroke(width = ringStroke)
-    )
-
-    // Solitaire Diamond Gem on Ring 2 Apex
-    val gemOffset = Offset(ring2Offset.x, ring2Offset.y - ringRadius)
-    drawCircle(
-        color = PureWhite,
-        radius = 5.dp.toPx() * sparkle,
-        center = gemOffset
-    )
-    drawCircle(
-        color = SkyBlue,
-        radius = 2.dp.toPx(),
-        center = gemOffset
-    )
-
-    // Center Heart Glyph joining the 3D union
-    drawCircle(
-        brush = Brush.radialGradient(
-            colors = listOf(PureWhite.copy(alpha = 0.9f * sparkle), Color.Transparent),
-            center = Offset(centerX, centerY),
-            radius = 16.dp.toPx()
-        ),
-        radius = 16.dp.toPx(),
-        center = Offset(centerX, centerY)
-    )
 }
 
 @Composable
@@ -506,13 +257,13 @@ fun LanguageSelectionScreen(
             Box(
                 modifier = Modifier
                     .size(46.dp)
-                    .background(LightBlue, CircleShape),
+                    .background(LightGreen, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Language,
                     contentDescription = "Language",
-                    tint = PrimaryBlue,
+                    tint = PrimaryEmerald,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -525,7 +276,7 @@ fun LanguageSelectionScreen(
                     color = TextPrimary
                 )
                 Text(
-                    text = "നിങ്ങളുടെ ഭാഷ തിരഞ്ഞെടുക്കുക",
+                    text = "Select the language you are comfortable with",
                     fontSize = 13.sp,
                     color = TextSecondary
                 )
@@ -541,7 +292,7 @@ fun LanguageSelectionScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.weight(1f)
         ) {
-            items(SampleData.languages) { lang ->
+            items(AppConfig.languages) { lang ->
                 val isSelected = lang.code == selectedLanguage.code
                 LanguageCard(
                     language = lang,
@@ -570,7 +321,7 @@ fun LanguageSelectionScreen(
                 .testTag("language_continue_button")
         ) {
             Text(
-                text = "Continue with ${selectedLanguage.nativeName} (${selectedLanguage.name})",
+                text = "Continue in ${selectedLanguage.nativeName}",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -588,6 +339,7 @@ private fun LanguageCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(96.dp)
+            .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .testTag("lang_${language.code}"),
         shape = RoundedCornerShape(14.dp),

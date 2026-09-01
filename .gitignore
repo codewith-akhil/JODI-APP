@@ -17,3 +17,9 @@ local.properties
 .env
 debug.keystore
 .build-outputs/
+
+# Release signing secrets
+key.properties
+soulmate-upload-key.jks
+my-upload-key.jks
+*.jks

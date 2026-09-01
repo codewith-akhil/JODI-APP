@@ -279,6 +279,10 @@ object FirebaseManager {
         val snap = database.getReference(NODE_PROFILES).child(uid).get().await()
         return snap.value as? Map<String, Any?>
     }
+    suspend fun fetchVerification(uid: String): Map<String, Any?>? {
+        val snap = database.getReference(NODE_VERIFICATIONS).child(uid).get().await()
+        return snap.value as? Map<String, Any?>
+    }
 
     suspend fun savePrivacySettings(uid: String, map: Map<String, Any>) {
         database.getReference(NODE_PRIVACY).child(uid).setValue(map).await()

@@ -1,6 +1,7 @@
 package com.example
 
 import android.app.Application
+import com.example.notifications.SoulmateFirebaseMessagingService
 import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
@@ -9,38 +10,68 @@ import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderF
 /**
  * Application entry point.
  *
- * Installs Firebase App Check with the Play Integrity provider so that
- * Firebase Phone Authentication verifies silently in-app (Google Play
- * Integrity attestation) and never falls back to the reCAPTCHA browser
- * redirect on real devices with Google Play services.
+ * Installs Firebase App Check so Firebase Phone Authentication verifies
+ * silently in-app and NEVER falls back to the reCAPTCHA browser redirect:
  *
- * DEBUG builds use the DebugAppCheckProviderFactory instead, so local
- * emulator development is not blocked by attestation. The debug token is
- * printed to Logcat (filter: "AppCheck") and must be whitelisted once in
- * Firebase Console -> App Check -> Manage debug tokens.
+ *  - Release/Play Store builds -> Play Integrity attestation (built-in).
+ *  - Debug builds -> Debug provider seeded with a FIXED debug token
+ *    (FIREBASE_APPCHECK_DEBUG_TOKEN from .env via the Secrets plugin).
+ *
+ * The debug token must be whitelisted ONCE in:
+ *   Firebase Console -> App Check -> Apps -> Manage debug tokens
+ * After that, debug builds exchange it for a valid App Check token and
+ * phone verification stays inside the app — no browser captcha.
  */
 class SoulmateApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
 
+        // 0. Notification channels for push (idempotent)
+        SoulmateFirebaseMessagingService.createChannels(this)
+
         // 1. Initialize Firebase FIRST - before any Firebase service is touched.
         FirebaseApp.initializeApp(this)
 
-        // 2. Install App Check immediately after Firebase init.
-        //    - Release/Play Store builds -> Play Integrity (silent, in-app).
-        //    - Debug builds -> Debug provider (emulator & local dev friendly).
-        val factory = if (BuildConfig.DEBUG) {
-            DebugAppCheckProviderFactory.getInstance()
-        } else {
-            PlayIntegrityAppCheckProviderFactory.getInstance()
-        }
+        if (BuildConfig.DEBUG) {
+            // 2a. Pre-seed the debug provider's storage with our FIXED debug
+            //     token so it is deterministic across reinstalls. The provider
+            //     reads it from:
+            //     prefs "com.google.firebase.appcheck.debug.store.<persistenceKey>"
+            //     key   "com.google.firebase.appcheck.debug.DEBUG_SECRET"
+            seedAppCheckDebugToken()
 
-        FirebaseAppCheck.getInstance().apply {
-            installAppCheckProviderFactory(factory)
-            // Keep tokens fresh in the background so requests never stall
-            // waiting for an attestation round-trip.
-            setTokenAutoRefreshEnabled(true)
+            FirebaseAppCheck.getInstance().apply {
+                installAppCheckProviderFactory(DebugAppCheckProviderFactory.getInstance())
+                setTokenAutoRefreshEnabled(true)
+            }
+        } else {
+            // 2b. Production: silent Play Integrity attestation.
+            FirebaseAppCheck.getInstance().apply {
+                installAppCheckProviderFactory(PlayIntegrityAppCheckProviderFactory.getInstance())
+                setTokenAutoRefreshEnabled(true)
+            }
+        }
+    }
+
+    private fun seedAppCheckDebugToken() {
+        val token: String? = try {
+            val field = BuildConfig::class.java.getField("FIREBASE_APPCHECK_DEBUG_TOKEN")
+            field.get(null) as? String
+        } catch (_: Exception) {
+            null
+        }
+        if (token.isNullOrBlank()) return
+        try {
+            val persistenceKey = FirebaseApp.getInstance().persistenceKey
+            getSharedPreferences(
+                "com.google.firebase.appcheck.debug.store.$persistenceKey",
+                MODE_PRIVATE
+            ).edit()
+                .putString("com.google.firebase.appcheck.debug.DEBUG_SECRET", token)
+                .apply()
+        } catch (_: Exception) {
+            // Never block app startup over the debug token
         }
     }
 }

@@ -172,6 +172,9 @@ exports.sendMatchRequest = onCall({ region: "asia-south1" }, async (request) => 
     createdAt: admin.database.ServerValue.TIMESTAMP,
   });
 
+  await sendPushToUid(targetUid, "INTEREST", "New Match Request 💚",
+    "Someone verified sent you a match request. Review it now!");
+
   const remaining = premium
     ? -1
     : Math.max(0, cfg.MAX_MATCH_REQUESTS_PER_DAY - ((await countRef.get()).val() || 0));
@@ -216,6 +219,8 @@ exports.respondToMatchRequest = onCall({ region: "asia-south1" }, async (request
       profileId: req.toUid,
       createdAt: admin.database.ServerValue.TIMESTAMP,
     });
+    await sendPushToUid(req.fromUid, "MATCH", "Match Request Accepted! 🎉",
+      "Your match request was accepted. Start the conversation!");
   }
   return { ok: true, status: action };
 });
@@ -282,6 +287,10 @@ exports.sendMessage = onCall({ region: "asia-south1" }, async (request) => {
     lastSenderId: uid,
   });
   await db.ref(`chats/${threadId}/members`).update({ [uid]: true, [targetUid]: true });
+
+  await sendPushToUid(targetUid, "MESSAGE",
+    type === "IMAGE" ? "New Photo Message 📷" : "New Message 💬",
+    type === "TEXT" ? body : "You received a photo message.");
 
   return { ok: true, messageId: msgRef.key, threadId };
 });
@@ -395,6 +404,15 @@ exports.submitForVerification = onCall({ region: "asia-south1" }, async (request
     status: "PENDING_VERIFICATION",
     "verification/status": "PENDING",
   });
+
+  // Issue a personal referral code once (used by the Referral screen)
+  const myCodeSnap = await db.ref(`users/${uid}/referralCode`).get();
+  if (!myCodeSnap.exists()) {
+    const myCode = `SM-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+    await db.ref(`users/${uid}/referralCode`).set(myCode);
+    await db.ref(`referral_index/${myCode}`).set(uid);
+  }
+
   return { ok: true, status: "PENDING_VERIFICATION" };
 });
 
@@ -446,3 +464,105 @@ exports.adminSuspendUser = adminSetStatus("SUSPENDED");
 exports.adminBanUser = adminSetStatus("BANNED");
 exports.adminReactivateUser = adminSetStatus("ACTIVE");
 exports.adminDeactivateUser = adminSetStatus("DEACTIVATED");
+
+// ---------------------------------------------------------------------------
+// FCM push helpers — targeted notifications to a user's registered device(s)
+// ---------------------------------------------------------------------------
+async function sendPushToUid(uid, type, title, body, extraData = {}) {
+  try {
+    const tokenSnap = await db.ref(`users/${uid}/fcmToken`).get();
+    const token = tokenSnap.val();
+    if (!token) return; // no registered device
+    await admin.messaging().send({
+      token,
+      data: { type, title, body, ...extraData },
+      android: { priority: "high" },
+      apns: { payload: { aps: { sound: "default" } } },
+    });
+  } catch (err) {
+    console.warn(`FCM push to ${uid} failed:`, err && err.message);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// discoverProfiles — server-side discovery feed (rule #22).
+// Clients can NEVER list the users node directly (RTDB rules deny it);
+// this callable returns only ACTIVE + VERIFIED profiles, excluding the
+// caller, blocked pairs and already-connected members.
+// ---------------------------------------------------------------------------
+exports.discoverProfiles = onCall({ region: "asia-south1" }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
+
+  const limitRaw = Number(request.data?.limit) || 50;
+  const limit = Math.min(Math.max(limitRaw, 1), 100);
+
+  const [meSnap, usersSnap, blocksSnap] = await Promise.all([
+    db.ref(`users/${uid}`).get(),
+    db.ref("users").get(),
+    db.ref(`blocks/${uid}`).get(),
+  ]);
+  if (!meSnap.exists()) throw new HttpsError("failed-precondition", "Account not initialised.");
+
+  const me = meSnap.val();
+  const myStatus = me.status || "INCOMPLETE";
+  if (["BANNED", "SUSPENDED", "REJECTED"].includes(myStatus)) {
+    throw new HttpsError("permission-denied", "Your account cannot browse profiles right now.");
+  }
+
+  const blockedByMe = blocksSnap.exists() ? Object.keys(blocksSnap.val() || {}) : [];
+
+  const all = usersSnap.val() || {};
+  const profiles = [];
+  for (const [otherUid, other] of Object.entries(all)) {
+    if (otherUid === uid) continue;
+    if (blockedByMe.includes(otherUid)) continue;
+    const status = other.status || "INCOMPLETE";
+    if (status !== "ACTIVE") continue;
+    const ver = (other.verification && other.verification.status) || "UNVERIFIED";
+    if (ver !== "VERIFIED") continue;
+
+    const pSnap = await db.ref(`profiles/${otherUid}`).get();
+    const p = pSnap.val();
+    if (!p || !p.name) continue;
+
+    profiles.push({ id: otherUid, ...p });
+    if (profiles.length >= limit) break;
+  }
+
+  return { ok: true, profiles };
+});
+
+// ---------------------------------------------------------------------------
+// applyReferralCode — records a referral for the signed-in new member.
+// Code format: SM-XXXXXX (issued from users/{uid}/referralCode).
+// ---------------------------------------------------------------------------
+exports.applyReferralCode = onCall({ region: "asia-south1" }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
+  const code = String(request.data?.code || "").trim().toUpperCase();
+  if (!/^SM-[A-Z0-9]{5,10}$/.test(code)) {
+    throw new HttpsError("invalid-argument", "Invalid referral code format.");
+  }
+
+  const ownerSnap = await db.ref("referral_index").child(code).get();
+  if (!ownerSnap.exists()) throw new HttpsError("not-found", "Referral code not found.");
+  const ownerUid = ownerSnap.val();
+  if (ownerUid === uid) throw new HttpsError("invalid-argument", "You cannot use your own referral code.");
+
+  const mineRef = db.ref(`users/${uid}/referral/usedBy`);
+  const existing = (await mineRef.get()).val() || {};
+  if (Object.values(existing).includes(ownerUid)) {
+    throw new HttpsError("already-exists", "Referral already applied.");
+  }
+  await mineRef.child(ownerUid).set(true);
+  await db.ref(`users/${ownerUid}/referral/referred`).child(uid).set(true);
+  await db.ref(`notifications/${ownerUid}`).push({
+    type: "SYSTEM",
+    title: "Referral Joined 🎉",
+    body: "A new member joined with your referral. Premium weeks credited soon!",
+    timeAgo: "Just now", isRead: false,
+    createdAt: admin.database.ServerValue.TIMESTAMP,
+  });
+  return { ok: true };
+});

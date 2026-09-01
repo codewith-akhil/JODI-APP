@@ -2,8 +2,9 @@ package com.example.ui.screens
 
 import android.app.Activity
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,12 +20,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Security
@@ -35,7 +35,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
@@ -44,46 +43,36 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.composed
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.BorderLight
-import com.example.ui.theme.CrimsonRed
-import com.example.ui.theme.DeepBurgundy
-import com.example.ui.theme.GoldAccent
-import com.example.ui.theme.LightGold
-import com.example.ui.theme.LightGreen
-import com.example.ui.theme.LightRose
-import com.example.ui.theme.PureWhite
-import com.example.ui.theme.RosePrimary
-import com.example.ui.theme.SuccessGreen
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
-import com.example.ui.theme.WarmBackground
+import com.example.R
+import com.example.ui.theme.*
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.ScreenState
 import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     viewModel: AppViewModel,
@@ -134,7 +123,7 @@ fun LoginScreen(
             Surface(
                 onClick = { viewModel.navigateTo(ScreenState.LANGUAGE_SELECT) },
                 shape = RoundedCornerShape(20.dp),
-                color = LightRose,
+                color = LightTeal,
                 modifier = Modifier.testTag("login_language_tag")
             ) {
                 Row(
@@ -147,20 +136,39 @@ fun LoginScreen(
                         text = selectedLanguage.nativeName,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = DeepBurgundy
+                        color = PrimaryEmerald
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Real JODI SOULMATE emblem
+        Box(
+            modifier = Modifier
+                .size(84.dp)
+                .clip(CircleShape)
+                .background(PureWhite)
+                .padding(2.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.foundation.Image(
+                painter = painterResource(id = R.drawable.ic_jodii_logo),
+                contentDescription = "JODI Soulmate",
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
 
         // Headline
         Text(
             text = "Welcome to Soulmate",
-            fontSize = 28.sp,
+            fontSize = 27.sp,
             fontWeight = FontWeight.Black,
-            color = DeepBurgundy
+            color = PrimaryEmerald
         )
         Text(
             text = "Enter your mobile number to find your perfect partner",
@@ -169,7 +177,7 @@ fun LoginScreen(
             modifier = Modifier.padding(top = 4.dp)
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(26.dp))
 
         // Mobile Number Card
         Card(
@@ -252,10 +260,10 @@ fun LoginScreen(
                             unfocusedTextColor = TextPrimary,
                             focusedContainerColor = PureWhite,
                             unfocusedContainerColor = PureWhite,
-                            focusedBorderColor = DeepBurgundy,
+                            focusedBorderColor = PrimaryEmerald,
                             unfocusedBorderColor = BorderLight,
-                            cursorColor = DeepBurgundy,
-                            focusedLeadingIconColor = DeepBurgundy,
+                            cursorColor = PrimaryEmerald,
+                            focusedLeadingIconColor = PrimaryEmerald,
                             unfocusedLeadingIconColor = TextSecondary
                         ),
                         modifier = Modifier
@@ -265,7 +273,7 @@ fun LoginScreen(
                             Icon(
                                 imageVector = Icons.Default.Phone,
                                 contentDescription = "Phone",
-                                tint = DeepBurgundy
+                                tint = PrimaryEmerald
                             )
                         }
                     )
@@ -289,19 +297,15 @@ fun LoginScreen(
         val isSendingOtp by viewModel.isOtpSending.collectAsState()
         Button(
             onClick = {
-                if (phoneNumber.length < 5) {
-                    viewModel.setPhoneNumber("9876543210") // auto-fill sample for convenience
+                if (phoneNumber.length < 10) {
+                    viewModel.showToast("Please enter a valid 10-digit mobile number.")
+                    return@Button
                 }
-                if (activity != null) {
-                    viewModel.requestOtp(activity)
-                } else {
-                    // Headless fallback (rare): go straight to OTP entry in demo mode
-                    viewModel.navigateTo(ScreenState.OTP_VERIFY)
-                }
+                activity?.let { viewModel.requestOtp(it) }
             },
             enabled = !isSendingOtp,
             colors = ButtonDefaults.buttonColors(
-                containerColor = DeepBurgundy,
+                containerColor = PrimaryEmerald,
                 contentColor = PureWhite
             ),
             shape = RoundedCornerShape(16.dp),
@@ -318,13 +322,13 @@ fun LoginScreen(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Sending OTP via Firebase...",
+                    text = "Sending OTP...",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )
             } else {
                 Text(
-                    text = "Get OTP / ഒ.ടി.പി നേടുക",
+                    text = "Get OTP",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -377,7 +381,7 @@ fun LoginScreen(
             if (isGoogleSigningIn) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
-                    color = DeepBurgundy,
+                    color = PrimaryEmerald,
                     strokeWidth = 2.dp
                 )
             } else {
@@ -406,25 +410,6 @@ fun LoginScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Create Profile Direct Link
-        TextButton(
-            onClick = {
-                viewModel.navigateTo(ScreenState.PROFILE_CREATION)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("new_profile_creation_link")
-        ) {
-            Text(
-                text = "New User? Create Matrimony Profile Wizard ✨",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = DeepBurgundy
-            )
-        }
-
         Spacer(modifier = Modifier.weight(1f))
 
         // Trust Footer
@@ -441,7 +426,7 @@ fun LoginScreen(
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = "Verified Matchmaking Platform by Soulmate",
+                text = "Verified Matchmaking Platform by JODI Soulmate",
                 fontSize = 12.sp,
                 color = TextSecondary
             )
@@ -462,10 +447,18 @@ fun OtpVerificationScreen(
 
     val context = LocalContext.current
     val activity = context as? Activity
-    var secondsLeft by remember { mutableIntStateOf(60) }  // Rule #1: 60s resend cooldown
+    var secondsLeft by androidx.compose.runtime.mutableIntStateOf(60)
+    val focusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(key1 = secondsLeft) {
-        if (secondsLeft > 0) {
+    // Open the keyboard automatically when the screen appears
+    LaunchedEffect(Unit) {
+        delay(250) // let the transition settle so focus is not stolen
+        focusRequester.requestFocus()
+    }
+
+    LaunchedEffect(Unit) {
+        secondsLeft = 60
+        while (secondsLeft > 0) {
             delay(1000L)
             secondsLeft -= 1
         }
@@ -474,6 +467,7 @@ fun OtpVerificationScreen(
     // Auto-submit when all 6 digits are entered
     LaunchedEffect(otpCode) {
         if (otpCode.length == 6 && !isVerifying) {
+            delay(150)
             viewModel.verifyOtp(otpCode)
         }
     }
@@ -485,10 +479,11 @@ fun OtpVerificationScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
             .padding(24.dp)
+            .noRippleClickable { focusRequester.requestFocus() }
     ) {
         // Top Back Button
         IconButton(
-            onClick = { viewModel.navigateTo(ScreenState.LOGIN) },
+            onClick = { viewModel.navigateBack() },
             modifier = Modifier.testTag("otp_back_button")
         ) {
             Icon(
@@ -498,19 +493,19 @@ fun OtpVerificationScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Icon Header
         Box(
             modifier = Modifier
                 .size(60.dp)
-                .background(LightRose, CircleShape),
+                .background(LightGreen, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Lock,
                 contentDescription = "OTP Lock",
-                tint = DeepBurgundy,
+                tint = PrimaryEmerald,
                 modifier = Modifier.size(30.dp)
             )
         }
@@ -536,48 +531,71 @@ fun OtpVerificationScreen(
                 text = "$countryCode $phoneNumber",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = DeepBurgundy
+                color = PrimaryEmerald
             )
         }
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // OTP Input Boxes (6 Digits — Firebase Phone Auth standard)
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            for (i in 0 until 6) {
-                val digit = if (i < otpCode.length) otpCode[i].toString() else ""
-                val isFocused = i == otpCode.length
+        // OTP Input — a real (visually hidden) text field drives the 6 boxes,
+        // so the system keyboard opens and SMS autofill works natively.
+        Box {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                for (i in 0 until 6) {
+                    val digit = if (i < otpCode.length) otpCode[i].toString() else ""
+                    val isFocused = i == otpCode.length
 
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(54.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(PureWhite)
-                        .border(
-                            width = if (isFocused) 2.dp else 1.dp,
-                            color = when {
-                                isOtpError -> CrimsonRed
-                                isFocused -> RosePrimary
-                                digit.isNotEmpty() -> DeepBurgundy
-                                else -> BorderLight
-                            },
-                            shape = RoundedCornerShape(12.dp)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(54.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(PureWhite)
+                            .border(
+                                width = if (isFocused) 2.dp else 1.dp,
+                                color = when {
+                                    isOtpError -> CrimsonRed
+                                    isFocused -> PrimaryEmerald
+                                    digit.isNotEmpty() -> PrimaryEmerald
+                                    else -> BorderLight
+                                },
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .testTag("otp_box_$i"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = digit,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
                         )
-                        .testTag("otp_box_$i"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = digit,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
+                    }
                 }
             }
+
+            BasicTextField(
+                value = otpCode,
+                onValueChange = { viewModel.setOtpCode(it) },
+                textStyle = TextStyle(color = Color.Transparent, fontSize = 1.sp),
+                cursorBrush = SolidColor(Color.Transparent),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.NumberPassword,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = { viewModel.verifyOtp(otpCode) }
+                ),
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp)
+                    .focusRequester(focusRequester)
+                    .testTag("otp_hidden_field")
+            )
         }
 
         if (isOtpError) {
@@ -591,42 +609,6 @@ fun OtpVerificationScreen(
         }
 
         Spacer(modifier = Modifier.height(20.dp))
-
-        // Demo Helper Card
-        Card(
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = LightGreen),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = "Demo Tip",
-                    tint = SuccessGreen,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Demo fallback: use OTP 123456 if Firebase SMS is unavailable",
-                    fontSize = 11.sp,
-                    color = SuccessGreen,
-                    fontWeight = FontWeight.Medium,
-                    lineHeight = 14.sp
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                TextButton(
-                    onClick = { viewModel.setOtpCode("123456") },
-                    modifier = Modifier.testTag("quick_fill_otp")
-                ) {
-                    Text("Auto Fill", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SuccessGreen)
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
 
         // Resend Timer
         Row(
@@ -652,7 +634,7 @@ fun OtpVerificationScreen(
                         text = "Resend OTP",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = RosePrimary
+                        color = PrimaryEmerald
                     )
                 }
             }
@@ -665,7 +647,7 @@ fun OtpVerificationScreen(
             onClick = { viewModel.verifyOtp(otpCode) },
             enabled = otpCode.length == 6 && !isVerifying,
             colors = ButtonDefaults.buttonColors(
-                containerColor = DeepBurgundy,
+                containerColor = PrimaryEmerald,
                 contentColor = PureWhite
             ),
             shape = RoundedCornerShape(16.dp),
@@ -695,62 +677,25 @@ fun OtpVerificationScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Numeric Keypad for direct testing
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            val keyRows = listOf(
-                listOf("1", "2", "3"),
-                listOf("4", "5", "6"),
-                listOf("7", "8", "9"),
-                listOf("C", "0", "⌫")
-            )
-
-            for (row in keyRows) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    for (key in row) {
-                        Surface(
-                            onClick = {
-                                when (key) {
-                                    "C" -> viewModel.setOtpCode("")
-                                    "⌫" -> {
-                                        if (otpCode.isNotEmpty()) {
-                                            viewModel.setOtpCode(otpCode.dropLast(1))
-                                        }
-                                    }
-                                    else -> {
-                                        if (otpCode.length < 6) {
-                                            viewModel.setOtpCode(otpCode + key)
-                                        }
-                                    }
-                                }
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            color = PureWhite,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderLight),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(46.dp)
-                                .testTag("keypad_$key")
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = key,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextPrimary
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        Text(
+            text = "Didn't receive the code? Check your SMS inbox or use the automatic detection when it arrives.",
+            fontSize = 12.sp,
+            color = TextMuted,
+            textAlign = TextAlign.Center,
+            lineHeight = 16.sp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+        )
     }
+}
+
+private fun Modifier.noRippleClickable(onClick: () -> Unit): Modifier = composed {
+    clickable(
+        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+        indication = null,
+        onClick = onClick
+    )
 }

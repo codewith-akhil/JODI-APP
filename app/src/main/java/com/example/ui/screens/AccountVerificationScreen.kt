@@ -430,7 +430,7 @@ fun AccountVerificationScreen(
         Spacer(modifier = Modifier.height(10.dp))
 
         Text(
-            text = "Demo tip: if Firebase SMS is unavailable, use OTP 123456.",
+            text = "For your security, this action always requires OTP verification.",
             fontSize = 10.sp,
             color = TextMuted,
             modifier = Modifier.align(Alignment.CenterHorizontally)

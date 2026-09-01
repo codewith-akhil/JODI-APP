@@ -4,6 +4,7 @@
 
     <!-- Network access for Firebase Auth / Firestore / Storage / Retrofit -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
@@ -27,6 +28,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Firebase Cloud Messaging: match / message / interest push notifications -->
+        <service
+            android:name=".notifications.SoulmateFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
 
         <!-- Camera capture for profile photos (TakePicture contract, no CAMERA permission needed) -->
         <provider

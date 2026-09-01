@@ -1,4 +1,6 @@
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
+import java.util.Properties
+import java.io.File
 
 plugins {
   alias(libs.plugins.android.application)
@@ -25,11 +27,21 @@ android {
 
   signingConfigs {
     create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      storeFile = file(keystorePath)
-      storePassword = System.getenv("STORE_PASSWORD")
-      keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD")
+      // Credentials come from key.properties (gitignored) or CI env vars.
+      val keystoreProps = Properties()
+      val keyPropsFile = rootProject.file("key.properties")
+      if (keyPropsFile.exists()) {
+        keyPropsFile.inputStream().use { stream -> keystoreProps.load(stream) }
+      }
+      val rawStorePath: String = keystoreProps.getProperty("storeFile", "soulmate-upload-key.jks")
+      // Relative paths resolve against the ROOT project (keystore lives beside key.properties)
+      val rawFile = File(rawStorePath)
+      storeFile = if (rawFile.isAbsolute) rawFile else rootDir.resolve(rawStorePath)
+      storePassword = keystoreProps.getProperty("storePassword")
+        ?: System.getenv("STORE_PASSWORD")
+      keyAlias = keystoreProps.getProperty("keyAlias") ?: "upload"
+      keyPassword = keystoreProps.getProperty("keyPassword")
+        ?: System.getenv("KEY_PASSWORD")
     }
     create("debugConfig") {
       storeFile = file("${rootDir}/debug.keystore")
@@ -91,6 +103,7 @@ dependencies {
   implementation(libs.androidx.compose.ui.graphics)
   implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.core.ktx)
+  implementation(libs.androidx.fragment.ktx)
   // implementation(libs.androidx.datastore.preferences)
   implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -106,6 +119,7 @@ dependencies {
   implementation(libs.firebase.database)
   implementation(libs.firebase.storage)
   implementation(libs.firebase.functions)
+  implementation(libs.firebase.messaging)
 
   // Google Sign-In via Credential Manager
   implementation(libs.androidx.credentials)
